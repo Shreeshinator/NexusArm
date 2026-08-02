@@ -1,0 +1,21 @@
+[0.027s] Invoking command in '/home/shreeshinator/ros2_ws/build/modular_arm_description': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake /home/shreeshinator/ros2_ws/src/modular_arm_description -DCMAKE_INSTALL_PREFIX=/home/shreeshinator/ros2_ws/install/modular_arm_description
+[0.049s] -- Found ament_cmake: 2.5.6 (/opt/ros/jazzy/share/ament_cmake/cmake)
+[0.557s] -- Override CMake install command with custom implementation using symlinks instead of copying resources
+[0.647s] Traceback (most recent call last):
+[0.648s]   File "/opt/ros/jazzy/share/ament_cmake_core/cmake/core/package_xml_2_cmake.py", line 22, in <module>
+[0.649s]     from catkin_pkg.package import parse_package_string
+[0.649s] ModuleNotFoundError: No module named 'catkin_pkg'
+[0.658s] [31mCMake Error at /opt/ros/jazzy/share/ament_cmake_core/cmake/core/ament_package_xml.cmake:95 (message):
+[0.659s]   execute_process(/home/shreeshinator/.local/bin/python3.12
+[0.659s]   /opt/ros/jazzy/share/ament_cmake_core/cmake/core/package_xml_2_cmake.py
+[0.659s]   /home/shreeshinator/ros2_ws/src/modular_arm_description/package.xml
+[0.659s]   /home/shreeshinator/ros2_ws/build/modular_arm_description/ament_cmake_core/package.cmake)
+[0.659s]   returned error code 1
+[0.660s] Call Stack (most recent call first):
+[0.660s]   /opt/ros/jazzy/share/ament_cmake_core/cmake/core/ament_package_xml.cmake:49 (_ament_package_xml)
+[0.660s]   /opt/ros/jazzy/share/ament_cmake_core/cmake/core/ament_package.cmake:63 (ament_package_xml)
+[0.661s]   CMakeLists.txt:10 (ament_package)
+[0.661s] 
+[0.661s] [0m
+[0.661s] -- Configuring incomplete, errors occurred!
+[0.671s] Invoked command in '/home/shreeshinator/ros2_ws/build/modular_arm_description' returned '1': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake /home/shreeshinator/ros2_ws/src/modular_arm_description -DCMAKE_INSTALL_PREFIX=/home/shreeshinator/ros2_ws/install/modular_arm_description

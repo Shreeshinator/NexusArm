@@ -1,0 +1,34 @@
+[0.041s] Invoking command in '/home/shreeshinator/ros2_ws/build/modular_arm_description': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake /home/shreeshinator/ros2_ws/src/modular_arm_description -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/home/shreeshinator/ros2_ws/install/modular_arm_description
+[0.441s] -- The C compiler identification is GNU 13.3.0
+[1.338s] -- The CXX compiler identification is GNU 13.3.0
+[2.114s] -- Detecting C compiler ABI info
+[2.572s] -- Detecting C compiler ABI info - done
+[2.586s] -- Check for working C compiler: /usr/bin/cc - skipped
+[2.615s] -- Detecting C compile features
+[2.616s] -- Detecting C compile features - done
+[2.816s] -- Detecting CXX compiler ABI info
+[3.299s] -- Detecting CXX compiler ABI info - done
+[3.324s] -- Check for working CXX compiler: /usr/bin/c++ - skipped
+[3.325s] -- Detecting CXX compile features
+[3.326s] -- Detecting CXX compile features - done
+[3.370s] -- Found ament_cmake: 2.5.6 (/opt/ros/jazzy/share/ament_cmake/cmake)
+[3.682s] -- Found Python3: /home/shreeshinator/.local/bin/python3.12 (found version "3.12.13") found components: Interpreter 
+[3.950s] -- Override CMake install command with custom implementation using symlinks instead of copying resources
+[4.093s] Traceback (most recent call last):
+[4.093s]   File "/opt/ros/jazzy/share/ament_cmake_core/cmake/core/package_xml_2_cmake.py", line 22, in <module>
+[4.093s]     from catkin_pkg.package import parse_package_string
+[4.094s] ModuleNotFoundError: No module named 'catkin_pkg'
+[4.098s] [31mCMake Error at /opt/ros/jazzy/share/ament_cmake_core/cmake/core/ament_package_xml.cmake:95 (message):
+[4.099s]   execute_process(/home/shreeshinator/.local/bin/python3.12
+[4.099s]   /opt/ros/jazzy/share/ament_cmake_core/cmake/core/package_xml_2_cmake.py
+[4.099s]   /home/shreeshinator/ros2_ws/src/modular_arm_description/package.xml
+[4.099s]   /home/shreeshinator/ros2_ws/build/modular_arm_description/ament_cmake_core/package.cmake)
+[4.099s]   returned error code 1
+[4.100s] Call Stack (most recent call first):
+[4.100s]   /opt/ros/jazzy/share/ament_cmake_core/cmake/core/ament_package_xml.cmake:49 (_ament_package_xml)
+[4.100s]   /opt/ros/jazzy/share/ament_cmake_core/cmake/core/ament_package.cmake:63 (ament_package_xml)
+[4.100s]   CMakeLists.txt:10 (ament_package)
+[4.100s] 
+[4.101s] [0m
+[4.101s] -- Configuring incomplete, errors occurred!
+[4.109s] Invoked command in '/home/shreeshinator/ros2_ws/build/modular_arm_description' returned '1': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake /home/shreeshinator/ros2_ws/src/modular_arm_description -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/home/shreeshinator/ros2_ws/install/modular_arm_description

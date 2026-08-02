@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>modular_arm_kinematics</name>
+  <version>0.1.0</version>
+  <description>Pure-Python FK/IK for the modular 4-DOF arm, plus a ROS2 node exposing the move_to(x,y,z) API over a service and a FollowJointTrajectory action client.</description>
+  <maintainer email="shreeshtripathi13@gmail.com">Shreesh</maintainer>
+  <license>Apache-2.0</license>
+
+  <depend>rclpy</depend>
+  <depend>control_msgs</depend>
+  <depend>trajectory_msgs</depend>
+  <depend>modular_arm_interfaces</depend>
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

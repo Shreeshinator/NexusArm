@@ -1,0 +1,56 @@
+[0.055s] Invoking command in '/home/shreeshinator/ros2_ws/build/modular_arm_interfaces': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake /home/shreeshinator/ros2_ws/src/modular_arm_interfaces -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/home/shreeshinator/ros2_ws/install/modular_arm_interfaces
+[0.490s] -- The C compiler identification is GNU 13.3.0
+[1.365s] -- The CXX compiler identification is GNU 13.3.0
+[2.145s] -- Detecting C compiler ABI info
+[2.605s] -- Detecting C compiler ABI info - done
+[2.623s] -- Check for working C compiler: /usr/bin/cc - skipped
+[2.646s] -- Detecting C compile features
+[2.648s] -- Detecting C compile features - done
+[2.848s] -- Detecting CXX compiler ABI info
+[3.330s] -- Detecting CXX compiler ABI info - done
+[3.351s] -- Check for working CXX compiler: /usr/bin/c++ - skipped
+[3.355s] -- Detecting CXX compile features
+[3.355s] -- Detecting CXX compile features - done
+[3.401s] -- Found ament_cmake: 2.5.6 (/opt/ros/jazzy/share/ament_cmake/cmake)
+[3.713s] -- Found Python3: /home/shreeshinator/.local/bin/python3.12 (found version "3.12.13") found components: Interpreter 
+[3.982s] -- Override CMake install command with custom implementation using symlinks instead of copying resources
+[4.096s] -- Found rosidl_default_generators: 1.6.1 (/opt/ros/jazzy/share/rosidl_default_generators/cmake)
+[4.124s] -- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+[4.543s] -- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+[4.689s] -- Found rosidl_adapter: 4.6.9 (/opt/ros/jazzy/share/rosidl_adapter/cmake)
+[4.700s] -- Found std_msgs: 5.3.8 (/opt/ros/jazzy/share/std_msgs/cmake)
+[5.109s] [31mCMake Error at /opt/ros/jazzy/share/rosidl_adapter/cmake/rosidl_adapt_interfaces.cmake:57 (message):
+[5.110s]   execute_process(/home/shreeshinator/.local/bin/python3.12 -m rosidl_adapter
+[5.110s]   --package-name modular_arm_interfaces --arguments-file
+[5.110s]   /home/shreeshinator/ros2_ws/build/modular_arm_interfaces/rosidl_adapter__arguments__modular_arm_interfaces.json
+[5.111s]   --output-dir
+[5.111s]   /home/shreeshinator/ros2_ws/build/modular_arm_interfaces/rosidl_adapter/modular_arm_interfaces
+[5.111s]   --output-file
+[5.111s]   /home/shreeshinator/ros2_ws/build/modular_arm_interfaces/rosidl_adapter/modular_arm_interfaces.idls)
+[5.111s]   returned error code 1:
+[5.111s] 
+[5.111s]   Traceback (most recent call last):
+[5.112s] 
+[5.112s]     File "<frozen runpy>", line 198, in _run_module_as_main
+[5.112s]     File "<frozen runpy>", line 88, in _run_code
+[5.112s]     File "/opt/ros/jazzy/lib/python3.12/site-packages/rosidl_adapter/__main__.py", line 19, in <module>
+[5.112s]       sys.exit(main())
+[5.112s]                ^^^^^^
+[5.112s]     File "/opt/ros/jazzy/lib/python3.12/site-packages/rosidl_adapter/main.py", line 53, in main
+[5.112s]       abs_idl_file = convert_to_idl(
+[5.112s]                      ^^^^^^^^^^^^^^^
+[5.113s]     File "/opt/ros/jazzy/lib/python3.12/site-packages/rosidl_adapter/__init__.py", line 23, in convert_to_idl
+[5.113s]       from rosidl_adapter.srv import convert_srv_to_idl
+[5.113s]     File "/opt/ros/jazzy/lib/python3.12/site-packages/rosidl_adapter/srv/__init__.py", line 16, in <module>
+[5.113s]       from rosidl_adapter.resource import expand_template
+[5.113s]     File "/opt/ros/jazzy/lib/python3.12/site-packages/rosidl_adapter/resource/__init__.py", line 19, in <module>
+[5.113s]       import em
+[5.113s] 
+[5.113s]   ModuleNotFoundError: No module named 'em'
+[5.113s] 
+[5.114s] Call Stack (most recent call first):
+[5.114s]   /opt/ros/jazzy/share/rosidl_cmake/cmake/rosidl_generate_interfaces.cmake:132 (rosidl_adapt_interfaces)
+[5.114s]   CMakeLists.txt:12 (rosidl_generate_interfaces)
+[5.114s] 
+[5.114s] [0m
+[5.114s] -- Configuring incomplete, errors occurred!
