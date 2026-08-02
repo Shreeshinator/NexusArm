@@ -2,7 +2,7 @@
 
 ## 1. Arm design
 
-Kinematic layout copied from ROBOTIS **OpenMANIPULATOR-X** (for current simulation only)(the most common
+Kinematic layout copied from ROBOTIS **OpenMANIPULATOR-X** (for current simulation only) (the most common
 open-source 4-DOF arm in the ROS ecosystem — real hardware exists if you ever
 want to move off simulation): one yaw joint at the base, then three pitch
 joints (shoulder, elbow, wrist) in the vertical plane that yaw selects.
@@ -11,7 +11,7 @@ joints (shoulder, elbow, wrist) in the vertical plane that yaw selects.
 joint1 (yaw, Z)  ->  joint2 (shoulder pitch)  ->  joint3 (elbow pitch)  ->  joint4 (wrist pitch)  ->  end_effector_link
 ```
 
-This gives closed-form (non-iterative) IK: `theta1 = atan2(y, x)`, then a
+This gives closed-form (non-iterative) IK: `theta1 = atan2(y, x) for the base yaw`, then a
 standard 2-link planar solve for the shoulder/elbow, with the wrist absorbing
 whatever pitch is left over. See `modular_arm_kinematics/ik.py` for the full
 derivation in comments.
