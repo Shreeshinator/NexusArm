@@ -2,7 +2,7 @@
 
 ## 1. Arm design
 
-Kinematic layout copied from ROBOTIS **OpenMANIPULATOR-X** (the most common
+Kinematic layout copied from ROBOTIS **OpenMANIPULATOR-X** (for current simulation only)(the most common
 open-source 4-DOF arm in the ROS ecosystem — real hardware exists if you ever
 want to move off simulation): one yaw joint at the base, then three pitch
 joints (shoulder, elbow, wrist) in the vertical plane that yaw selects.
@@ -109,8 +109,7 @@ python3 -c "from modular_arm_kinematics.ik import inverse_kinematics; print(inve
 
 No vision, no speech, no LLM planner, no VLA integration. Those should each
 land as their own package (e.g. `modular_arm_vision`, `modular_arm_voice`,
-`modular_arm_planner`) that talks to `/modular_arm/move_to` — this keeps the
-core arm + kinematics stack stable while you iterate on the AI layer on top.
+`modular_arm_planner`) that talks to `/modular_arm/move_to`
 
 ## 10. Known things to double check on your machine
 
