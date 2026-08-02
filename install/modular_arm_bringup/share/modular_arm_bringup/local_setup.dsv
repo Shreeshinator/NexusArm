@@ -1,0 +1,2 @@
+source;share/modular_arm_bringup/environment/ament_prefix_path.sh
+source;share/modular_arm_bringup/environment/path.sh

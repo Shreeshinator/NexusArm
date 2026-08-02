@@ -1,0 +1,13 @@
+# Request: target end-effector position in the arm base frame (meters),
+# desired end-effector pitch (radians, 0 = horizontal, -pi/2 = pointing straight down),
+# and elbow configuration.
+float64 x
+float64 y
+float64 z
+float64 pitch
+string elbow            # "up" or "down"
+float64 duration_sec    # time to execute the trajectory, e.g. 2.0
+---
+bool success
+string message
+float64[] joint_angles  # [theta1, theta2, theta3, theta4] actually commanded, radians

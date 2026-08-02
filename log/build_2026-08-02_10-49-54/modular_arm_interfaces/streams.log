@@ -1,0 +1,163 @@
+[0.050s] Invoking command in '/home/shreeshinator/AI_Challenge_Robotic_Arm/build/modular_arm_interfaces': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_kinematics:/opt/ros/jazzy /usr/bin/cmake --build /home/shreeshinator/AI_Challenge_Robotic_Arm/build/modular_arm_interfaces -- -j12 -l12
+[0.234s] [  2%] Built target modular_arm_interfaces__rosidl_generator_type_description
+[0.248s] [  5%] Built target modular_arm_interfaces__rs
+[0.260s] [  5%] Built target ament_cmake_python_copy_modular_arm_interfaces
+[0.284s] [  8%] Built target modular_arm_interfaces__cpp
+[0.296s] [ 22%] Built target modular_arm_interfaces__rosidl_generator_c
+[0.362s] [ 31%] Built target modular_arm_interfaces__rosidl_typesupport_introspection_c
+[0.367s] [ 40%] Built target modular_arm_interfaces__rosidl_typesupport_c
+[0.376s] [ 48%] Built target modular_arm_interfaces__rosidl_typesupport_fastrtps_cpp
+[0.378s] [ 60%] Built target modular_arm_interfaces__rosidl_typesupport_fastrtps_c
+[0.379s] [ 74%] Built target modular_arm_interfaces__rosidl_typesupport_introspection_cpp
+[0.379s] [ 74%] Built target modular_arm_interfaces__rosidl_typesupport_cpp
+[0.419s] [ 74%] Built target modular_arm_interfaces
+[0.458s] [ 77%] Built target modular_arm_interfaces__py
+[0.501s] [ 82%] Built target modular_arm_interfaces__rosidl_generator_py
+[0.546s] [ 88%] Built target modular_arm_interfaces_s__rosidl_typesupport_c
+[0.551s] [100%] Built target modular_arm_interfaces_s__rosidl_typesupport_fastrtps_c
+[0.551s] [100%] Built target modular_arm_interfaces_s__rosidl_typesupport_introspection_c
+[0.622s] running egg_info
+[0.649s] writing modular_arm_interfaces.egg-info/PKG-INFO
+[0.650s] writing dependency_links to modular_arm_interfaces.egg-info/dependency_links.txt
+[0.650s] writing top-level names to modular_arm_interfaces.egg-info/top_level.txt
+[0.737s] reading manifest file 'modular_arm_interfaces.egg-info/SOURCES.txt'
+[0.740s] writing manifest file 'modular_arm_interfaces.egg-info/SOURCES.txt'
+[0.797s] [100%] Built target ament_cmake_python_build_modular_arm_interfaces_egg
+[0.815s] Invoked command in '/home/shreeshinator/AI_Challenge_Robotic_Arm/build/modular_arm_interfaces' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_kinematics:/opt/ros/jazzy /usr/bin/cmake --build /home/shreeshinator/AI_Challenge_Robotic_Arm/build/modular_arm_interfaces -- -j12 -l12
+[0.820s] Invoking command in '/home/shreeshinator/AI_Challenge_Robotic_Arm/build/modular_arm_interfaces': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_kinematics:/opt/ros/jazzy /usr/bin/cmake --install /home/shreeshinator/AI_Challenge_Robotic_Arm/build/modular_arm_interfaces
+[0.836s] -- Install configuration: ""
+[0.837s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/ament_index/resource_index/rosidl_interfaces/modular_arm_interfaces
+[0.837s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/srv/MoveTo.json
+[0.837s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces
+[0.838s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/msg
+[0.838s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/msg/rosidl_generator_c__visibility_control.h
+[0.838s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/srv
+[0.838s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/srv/detail
+[0.838s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/srv/detail/move_to__functions.h
+[0.838s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/srv/detail/move_to__functions.c
+[0.838s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/srv/detail/move_to__type_support.h
+[0.839s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/srv/detail/move_to__struct.h
+[0.839s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/srv/detail/move_to__description.c
+[0.840s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/srv/detail/move_to__type_support.c
+[0.840s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/srv/move_to.h
+[0.840s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/environment/library_path.sh
+[0.840s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/environment/library_path.dsv
+[0.840s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/lib/libmodular_arm_interfaces__rosidl_generator_c.so
+[0.840s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces
+[0.840s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/msg
+[0.840s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/msg/rosidl_typesupport_fastrtps_c__visibility_control.h
+[0.840s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/srv
+[0.840s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/srv/detail
+[0.840s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/srv/detail/move_to__rosidl_typesupport_fastrtps_c.h
+[0.841s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/lib/libmodular_arm_interfaces__rosidl_typesupport_fastrtps_c.so
+[0.842s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces
+[0.842s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/msg
+[0.842s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/msg/rosidl_typesupport_introspection_c__visibility_control.h
+[0.842s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/srv
+[0.842s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/srv/detail
+[0.842s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/srv/detail/move_to__rosidl_typesupport_introspection_c.h
+[0.842s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/srv/detail/move_to__type_support.c
+[0.843s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/lib/libmodular_arm_interfaces__rosidl_typesupport_introspection_c.so
+[0.844s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/lib/libmodular_arm_interfaces__rosidl_typesupport_c.so
+[0.844s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces
+[0.845s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/msg
+[0.846s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/msg/rosidl_generator_cpp__visibility_control.hpp
+[0.846s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/srv
+[0.846s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/srv/detail
+[0.846s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/srv/detail/move_to__traits.hpp
+[0.846s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/srv/detail/move_to__builder.hpp
+[0.846s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/srv/detail/move_to__struct.hpp
+[0.846s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/srv/detail/move_to__type_support.hpp
+[0.846s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/srv/move_to.hpp
+[0.846s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces
+[0.846s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/msg
+[0.846s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/msg/rosidl_typesupport_fastrtps_cpp__visibility_control.h
+[0.847s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/srv
+[0.847s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/srv/detail
+[0.847s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/srv/detail/move_to__rosidl_typesupport_fastrtps_cpp.hpp
+[0.848s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/srv/detail/dds_fastrtps
+[0.849s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/lib/libmodular_arm_interfaces__rosidl_typesupport_fastrtps_cpp.so
+[0.849s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces
+[0.849s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/srv
+[0.850s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/srv/detail
+[0.850s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/srv/detail/move_to__rosidl_typesupport_introspection_cpp.hpp
+[0.851s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/include/modular_arm_interfaces/modular_arm_interfaces/srv/detail/move_to__type_support.cpp
+[0.851s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/lib/libmodular_arm_interfaces__rosidl_typesupport_introspection_cpp.so
+[0.851s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/lib/libmodular_arm_interfaces__rosidl_typesupport_cpp.so
+[0.852s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/environment/pythonpath.sh
+[0.853s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/environment/pythonpath.dsv
+[0.853s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/lib/python3.12/site-packages/modular_arm_interfaces-0.1.0-py3.12.egg-info
+[0.853s] -- Installing: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/lib/python3.12/site-packages/modular_arm_interfaces-0.1.0-py3.12.egg-info/PKG-INFO
+[0.853s] -- Installing: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/lib/python3.12/site-packages/modular_arm_interfaces-0.1.0-py3.12.egg-info/SOURCES.txt
+[0.854s] -- Installing: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/lib/python3.12/site-packages/modular_arm_interfaces-0.1.0-py3.12.egg-info/top_level.txt
+[0.854s] -- Installing: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/lib/python3.12/site-packages/modular_arm_interfaces-0.1.0-py3.12.egg-info/dependency_links.txt
+[0.854s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/lib/python3.12/site-packages/modular_arm_interfaces
+[0.854s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/lib/python3.12/site-packages/modular_arm_interfaces/__init__.py
+[0.854s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/lib/python3.12/site-packages/modular_arm_interfaces/modular_arm_interfaces_s__rosidl_typesupport_fastrtps_c.so
+[0.854s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/lib/python3.12/site-packages/modular_arm_interfaces/srv
+[0.854s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/lib/python3.12/site-packages/modular_arm_interfaces/srv/__init__.py
+[0.855s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/lib/python3.12/site-packages/modular_arm_interfaces/srv/_move_to.py
+[0.855s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/lib/python3.12/site-packages/modular_arm_interfaces/srv/_move_to_s.c
+[0.855s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/lib/python3.12/site-packages/modular_arm_interfaces/_modular_arm_interfaces_s.ep.rosidl_typesupport_introspection_c.c
+[0.855s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/lib/python3.12/site-packages/modular_arm_interfaces/modular_arm_interfaces_s__rosidl_typesupport_c.so
+[0.855s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/lib/python3.12/site-packages/modular_arm_interfaces/modular_arm_interfaces_s__rosidl_typesupport_introspection_c.so
+[0.855s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/lib/python3.12/site-packages/modular_arm_interfaces/_modular_arm_interfaces_s.ep.rosidl_typesupport_fastrtps_c.c
+[0.856s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/lib/python3.12/site-packages/modular_arm_interfaces/_modular_arm_interfaces_s.ep.rosidl_typesupport_c.c
+[0.918s] Listing '/home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/lib/python3.12/site-packages/modular_arm_interfaces'...
+[0.919s] Listing '/home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/lib/python3.12/site-packages/modular_arm_interfaces/srv'...
+[0.928s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/lib/python3.12/site-packages/modular_arm_interfaces/modular_arm_interfaces_s__rosidl_typesupport_fastrtps_c.so
+[0.930s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/lib/python3.12/site-packages/modular_arm_interfaces/modular_arm_interfaces_s__rosidl_typesupport_introspection_c.so
+[0.930s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/lib/python3.12/site-packages/modular_arm_interfaces/modular_arm_interfaces_s__rosidl_typesupport_c.so
+[0.932s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/lib/libmodular_arm_interfaces__rosidl_generator_py.so
+[0.933s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/ament_index/resource_index/rust_packages/modular_arm_interfaces
+[0.933s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/rust
+[0.934s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/rust/src
+[0.934s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/rust/src/srv
+[0.934s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/rust/src/srv/rmw.rs
+[0.935s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/rust/src/lib.rs
+[0.935s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/rust/src/srv.rs
+[0.935s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/rust/Cargo.toml
+[0.935s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/rust/build.rs
+[0.935s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/srv/MoveTo.idl
+[0.936s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/srv/MoveTo.srv
+[0.936s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/ament_index/resource_index/package_run_dependencies/modular_arm_interfaces
+[0.936s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/ament_index/resource_index/parent_prefix_path/modular_arm_interfaces
+[0.936s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/environment/ament_prefix_path.sh
+[0.937s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/environment/ament_prefix_path.dsv
+[0.937s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/environment/path.sh
+[0.937s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/environment/path.dsv
+[0.937s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/local_setup.bash
+[0.937s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/local_setup.sh
+[0.938s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/local_setup.zsh
+[0.938s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/local_setup.dsv
+[0.938s] -- Installing: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/package.dsv
+[0.938s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/ament_index/resource_index/packages/modular_arm_interfaces
+[0.938s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/cmake/export_modular_arm_interfaces__rosidl_generator_cExport.cmake
+[0.938s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/cmake/export_modular_arm_interfaces__rosidl_generator_cExport-noconfig.cmake
+[0.939s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/cmake/export_modular_arm_interfaces__rosidl_typesupport_fastrtps_cExport.cmake
+[0.939s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/cmake/export_modular_arm_interfaces__rosidl_typesupport_fastrtps_cExport-noconfig.cmake
+[0.939s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/cmake/modular_arm_interfaces__rosidl_typesupport_introspection_cExport.cmake
+[0.939s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/cmake/modular_arm_interfaces__rosidl_typesupport_introspection_cExport-noconfig.cmake
+[0.939s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/cmake/modular_arm_interfaces__rosidl_typesupport_cExport.cmake
+[0.940s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/cmake/modular_arm_interfaces__rosidl_typesupport_cExport-noconfig.cmake
+[0.940s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/cmake/export_modular_arm_interfaces__rosidl_generator_cppExport.cmake
+[0.942s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/cmake/export_modular_arm_interfaces__rosidl_typesupport_fastrtps_cppExport.cmake
+[0.942s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/cmake/export_modular_arm_interfaces__rosidl_typesupport_fastrtps_cppExport-noconfig.cmake
+[0.943s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/cmake/modular_arm_interfaces__rosidl_typesupport_introspection_cppExport.cmake
+[0.943s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/cmake/modular_arm_interfaces__rosidl_typesupport_introspection_cppExport-noconfig.cmake
+[0.944s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/cmake/modular_arm_interfaces__rosidl_typesupport_cppExport.cmake
+[0.944s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/cmake/modular_arm_interfaces__rosidl_typesupport_cppExport-noconfig.cmake
+[0.945s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/cmake/export_modular_arm_interfaces__rosidl_generator_pyExport.cmake
+[0.946s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/cmake/export_modular_arm_interfaces__rosidl_generator_pyExport-noconfig.cmake
+[0.947s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/cmake/rosidl_cmake-extras.cmake
+[0.947s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/cmake/ament_cmake_export_dependencies-extras.cmake
+[0.947s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/cmake/ament_cmake_export_include_directories-extras.cmake
+[0.947s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/cmake/ament_cmake_export_libraries-extras.cmake
+[0.948s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/cmake/ament_cmake_export_targets-extras.cmake
+[0.948s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/cmake/rosidl_cmake_export_typesupport_targets-extras.cmake
+[0.948s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/cmake/rosidl_cmake_export_typesupport_libraries-extras.cmake
+[0.948s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/cmake/rosidl_cmake_aggregate_target-extras.cmake
+[0.949s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/cmake/modular_arm_interfacesConfig.cmake
+[0.949s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/cmake/modular_arm_interfacesConfig-version.cmake
+[0.949s] -- Up-to-date: /home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_interfaces/share/modular_arm_interfaces/package.xml
+[0.951s] Invoked command in '/home/shreeshinator/AI_Challenge_Robotic_Arm/build/modular_arm_interfaces' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/shreeshinator/AI_Challenge_Robotic_Arm/install/modular_arm_kinematics:/opt/ros/jazzy /usr/bin/cmake --install /home/shreeshinator/AI_Challenge_Robotic_Arm/build/modular_arm_interfaces

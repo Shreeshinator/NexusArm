@@ -1,0 +1,4 @@
+source;share/modular_arm_description/local_setup.bash
+source;share/modular_arm_description/local_setup.dsv
+source;share/modular_arm_description/local_setup.sh
+source;share/modular_arm_description/local_setup.zsh

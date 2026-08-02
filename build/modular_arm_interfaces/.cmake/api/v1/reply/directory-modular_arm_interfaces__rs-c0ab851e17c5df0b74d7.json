@@ -1,0 +1,14 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : [],
+		"files" : [],
+		"nodes" : []
+	},
+	"installers" : [],
+	"paths" : 
+	{
+		"build" : "modular_arm_interfaces__rs",
+		"source" : "/home/shreeshinator/AI_Challenge_Robotic_Arm/build/modular_arm_interfaces/modular_arm_interfaces__rs"
+	}
+}

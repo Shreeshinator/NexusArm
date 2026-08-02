@@ -1,0 +1,2 @@
+[console_scripts]
+move_to_node = modular_arm_kinematics.move_to_node:main
