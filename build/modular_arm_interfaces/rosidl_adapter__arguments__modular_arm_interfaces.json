@@ -1,6 +1,0 @@
-{
-  "package_name": "modular_arm_interfaces",
-  "non_idl_tuples": [
-    "/home/shreeshinator/ros2_ws/src/modular_arm_interfaces:srv/MoveTo.srv"
-  ]
-}
