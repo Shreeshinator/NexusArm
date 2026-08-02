@@ -1,9 +1,0 @@
-/home/shreeshinator/AI_Challenge_Robotic_Arm/build/modular_arm_bringup/CMakeFiles/uninstall.dir
-/home/shreeshinator/AI_Challenge_Robotic_Arm/build/modular_arm_bringup/CMakeFiles/modular_arm_bringup_uninstall.dir
-/home/shreeshinator/AI_Challenge_Robotic_Arm/build/modular_arm_bringup/CMakeFiles/test.dir
-/home/shreeshinator/AI_Challenge_Robotic_Arm/build/modular_arm_bringup/CMakeFiles/edit_cache.dir
-/home/shreeshinator/AI_Challenge_Robotic_Arm/build/modular_arm_bringup/CMakeFiles/rebuild_cache.dir
-/home/shreeshinator/AI_Challenge_Robotic_Arm/build/modular_arm_bringup/CMakeFiles/list_install_components.dir
-/home/shreeshinator/AI_Challenge_Robotic_Arm/build/modular_arm_bringup/CMakeFiles/install.dir
-/home/shreeshinator/AI_Challenge_Robotic_Arm/build/modular_arm_bringup/CMakeFiles/install/local.dir
-/home/shreeshinator/AI_Challenge_Robotic_Arm/build/modular_arm_bringup/CMakeFiles/install/strip.dir

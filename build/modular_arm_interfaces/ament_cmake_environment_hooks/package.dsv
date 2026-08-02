@@ -1,4 +1,0 @@
-source;share/modular_arm_interfaces/local_setup.bash
-source;share/modular_arm_interfaces/local_setup.dsv
-source;share/modular_arm_interfaces/local_setup.sh
-source;share/modular_arm_interfaces/local_setup.zsh
