@@ -14,17 +14,17 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    pkg_share = get_package_share_directory("modular_arm_description")
-    xacro_path = os.path.join(pkg_share, "urdf", "modular_arm.urdf.xacro")
-    ros_gz_sim_share = get_package_share_directory("ros_gz_sim")
+    pkg_share = get_package_share_directory("modular_arm_description") # get the path to the package share directory
+    xacro_path = os.path.join(pkg_share, "urdf", "modular_arm.urdf.xacro") # get the path to the xacro file
+    ros_gz_sim_share = get_package_share_directory("ros_gz_sim") # get the path to the ros_gz_sim package share directory
 
     robot_description = {
-        "robot_description": Command(["xacro ", xacro_path])
+        "robot_description": Command(["xacro ", xacro_path]) # Execute the xacro command to generate the URDF from the xacro file
     }
 
     # Start Gazebo Harmonic with an empty world
-    gz_sim = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
+    gz_sim = IncludeLaunchDescription( # Include the launch description for Gazebo Harmonic
+        PythonLaunchDescriptionSource( # for actually launching Gazebo Harmonic
             os.path.join(ros_gz_sim_share, "launch", "gz_sim.launch.py")
         ),
         launch_arguments={"gz_args": "-r -v3 empty.sdf"}.items(),

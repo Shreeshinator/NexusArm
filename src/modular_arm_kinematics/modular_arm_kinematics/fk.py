@@ -19,6 +19,7 @@ standalone (unit tests, notebooks, a future LLM planner, etc.).
 """
 from dataclasses import dataclass
 import math
+# dataclass is a simple way to define a class that is primarily used to store data, with automatically generated methods like __init__ and __repr__.
 
 # Link lengths (meters) -- keep in sync with the xacro properties L0..L3.
 L0 = 0.06  # ground -> shoulder height

@@ -1,11 +1,6 @@
 <?xml version="1.0"?>
 <robot name="modular_arm" xmlns:xacro="http://www.ros.org/wiki/xacro">
 
-  <!-- =========================================================
-       Link lengths. Keep these in sync with modular_arm_kinematics/fk.py
-       and ik.py (L0, L1, L2, L3) -- they are the single source of truth
-       for the analytical kinematics used later.
-       ========================================================= -->
   <xacro:property name="L0" value="0.06"/>   <!-- base stand height (ground -> shoulder) -->
   <xacro:property name="L1" value="0.12"/>   <!-- shoulder -> elbow (upper arm) -->
   <xacro:property name="L2" value="0.12"/>   <!-- elbow -> wrist (forearm) -->
@@ -128,10 +123,8 @@
     <axis xyz="0 1 0"/>
     <limit lower="-2.0944" upper="2.0944" effort="${joint_effort}" velocity="${joint_velocity}"/>
   </joint>
-
   <!-- =========================================================
-       end_effector: fixed frame at the tip -- mount point for a future
-       gripper / camera / tool. Vision & grasping modules should target this frame.
+       end effector link (fixed to the wrist)
        ========================================================= -->
   <link name="end_effector_link"/>
 
