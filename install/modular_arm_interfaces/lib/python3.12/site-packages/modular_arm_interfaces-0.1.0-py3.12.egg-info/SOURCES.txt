@@ -1,8 +1,0 @@
-setup.py
-modular_arm_interfaces/__init__.py
-modular_arm_interfaces.egg-info/PKG-INFO
-modular_arm_interfaces.egg-info/SOURCES.txt
-modular_arm_interfaces.egg-info/dependency_links.txt
-modular_arm_interfaces.egg-info/top_level.txt
-modular_arm_interfaces/srv/__init__.py
-modular_arm_interfaces/srv/_move_to.py

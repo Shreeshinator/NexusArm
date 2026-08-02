@@ -1,7 +1,0 @@
-Metadata-Version: 2.1
-Name: modular-arm-kinematics
-Version: 0.1.0
-Summary: FK/IK and move_to API for the modular 4-DOF arm.
-Maintainer: Shreesh
-Maintainer-email: shreeshtripathi13@gmail.com
-License: Apache-2.0

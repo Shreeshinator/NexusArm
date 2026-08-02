@@ -1,1 +1,0 @@
-xacro;robot_state_publisher;joint_state_publisher_gui;rviz2;ros_gz_sim;ros_gz_bridge;gz_ros2_control;controller_manager;joint_trajectory_controller;joint_state_broadcaster;ament_lint_auto;ament_lint_common
