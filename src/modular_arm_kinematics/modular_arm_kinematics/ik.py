@@ -17,7 +17,15 @@ import math
 from dataclasses import dataclass # dataclass contains only data, no methods, and is immutable by default 
 from typing import List # for the return type of JointSolution.as_list()
 
-from .fk import L0, L1, L2, L3 # the lengths of the arm segments
+from .fk import L0, L1, L2, L3  # the lengths of the arm segments
+
+# Joint angle limits (radians) — keep in sync with modular_arm.urdf.xacro
+JOINT_LIMITS = {
+    "joint1": (-3.14159, 3.14159),
+    "joint2": (-1.5708, 3.14159),
+    "joint3": (-3.14159, 3.14159),
+    "joint4": (-3.14159, 3.14159),
+}
 
 
 class Unreachable(Exception): # inherit from Exception to create a custom exception
@@ -36,45 +44,33 @@ class JointSolution:
 
 
 def inverse_kinematics(
-    x: float, # x coordinate of the target position
-    y: float, # y 
-    z: float, # z 
+    x: float,
+    y: float,
+    z: float,
     pitch: float = -math.pi / 2,
-    elbow: str = "up",
-) -> JointSolution: # returns a JointSolution object containing the four joint angles
+    elbow: str = None,
+) -> JointSolution:
     """Solve for joint angles reaching (x, y, z) with the given end-effector pitch.
 
     Args:
         x, y, z: target end-effector position in the arm base frame (meters).
         pitch: desired absolute end-effector pitch, radians (0 = horizontal,
                -pi/2 = pointing straight down -- the usual "top-down pick" pose).
-        elbow: "up" or "down" -- selects between the two valid elbow solutions.
+        elbow: "up" or "down" to force that configuration, or None to
+               automatically try both and return the first valid solution.
 
     Raises:
-        Unreachable: if the target is outside the arm's reach for the given pitch.
+        Unreachable: if no valid solution exists within joint limits.
     """
-    if elbow not in ("up", "down"):
-        raise ValueError("elbow must be 'up' or 'down'")
-    # raise ValueError if elbow is not "up" or "down". If it is not, the function will continue to execute, but the result will be invalid. This is a safeguard to ensure that the function is used correctly.
+    theta1 = math.atan2(y, x)
+    h = x * math.cos(theta1) + y * math.sin(theta1)
 
-    theta1 = math.atan2(y, x) # base yaw
-    r = math.hypot(x, y) # distance from the base to the target in the horizontal plane 
+    # Wrist centre. With the backward convention: h = hw - L3·cos(pitch).
+    hw = h + L3 * math.cos(pitch)
+    zw = (z - L0) - L3 * math.sin(pitch)
 
-    # work back from the target to the wrist center, which is L3 away from the end-effector along the pitch direction
-
-    rw = r - L3 * math.cos(pitch) # distance from the wrist to the target in the horizontal plane
-
-    """
-    Distance from the wrist to the target in the horizontal plane. r is the distance from the base to the target in the horizontal plane, and L3 * cos(pitch) is the horizontal distance from the wrist to the end-effector. By subtracting these two distances, we get the distance from the wrist to the target in the horizontal plane.
-    """
-
-    zw = (z - L0) - L3 * math.sin(pitch) # distance from the wrist to the target in the vertical plane
-    """
-    Distance from the wrist to the target in the vertical plane. z - L0 (the base) is the vertical distance from the base to the target, and L3 * sin(pitch) is the vertical distance from the wrist to the end-effector. By subtracting these two distances, we get the distance from the wrist to the target in the vertical plane.
-    """
-
-    d2 = rw * rw + zw * zw
-    d = math.sqrt(d2) # The final distance from the wrist to the target in 3D space, which is the hypotenuse of the right triangle formed by rw and zw. This distance is used to determine if the target is reachable by the arm.
+    d2 = hw * hw + zw * zw
+    d = math.sqrt(d2)
 
     if d > (L1 + L2) or d < abs(L1 - L2):
         raise Unreachable(
@@ -83,23 +79,87 @@ def inverse_kinematics(
             f"reachable range [{abs(L1 - L2):.3f}, {L1 + L2:.3f}]m)."
         )
 
-    cos_theta3 = (d2 - L1 * L1 - L2 * L2) / (2 * L1 * L2) # law of cosines for findig the elbow angle
-    cos_theta3 = max(-1.0, min(1.0, cos_theta3))  # clamp for float noise
-    theta3_mag = math.acos(cos_theta3) # actual elbow angle
+    cos_theta3 = (d2 - L1 * L1 - L2 * L2) / (2 * L1 * L2)
+    cos_theta3 = max(-1.0, min(1.0, cos_theta3))
+    theta3_mag = math.acos(cos_theta3)
 
-    theta3 = theta3_mag if elbow == "up" else -theta3_mag # THIS is the elbow up/down selection -- the acos function returns the angle in the range [0, pi], which corresponds to the "up" configuration. If the user wants the "down" configuration, we simply negate the angle.
+    candidates = []
+    if elbow is None:
+        candidates = ["up", "down"]
+    elif elbow in ("up", "down"):
+        candidates = [elbow]
+    else:
+        raise ValueError("elbow must be 'up', 'down', or None")
 
-    theta2 = math.atan2(zw, rw) - math.atan2(L2 * math.sin(theta3), L1 + L2 * math.cos(theta3)) # find the shoulder angle using the law of cosines and the law of sines by subtracting the distance from the wrist to the elbow. The first term is the angle from the horizontal to the line connecting the shoulder to the wrist, and the second term is the angle from that line to the line connecting the shoulder to the elbow. The difference between these two angles gives us the shoulder angle.
+    errors = []
+    for mode in candidates:
+        theta3 = theta3_mag if mode == "up" else -theta3_mag
+        theta2 = math.atan2(zw, -hw) - math.atan2(
+            L2 * math.sin(theta3), L1 + L2 * math.cos(theta3)
+        )
+        theta4 = pitch - theta2 - theta3
 
-    theta4 = pitch - theta2 - theta3
+        # Wrap angles by ±2π to fit within joint limits.  The forward
+        # kinematics only depends on sin/cos of cumulative angles, so
+        # wrapping an individual joint by 2π leaves the end-effector
+        # pose unchanged while keeping the joint within its limit.
+        t2 = _wrap_angle(theta2, *JOINT_LIMITS["joint2"])
+        t3 = _wrap_angle(theta3, *JOINT_LIMITS["joint3"])
+        t4 = _wrap_angle(theta4, *JOINT_LIMITS["joint4"])
 
-    return JointSolution(theta1=theta1, theta2=theta2, theta3=theta3, theta4=theta4)
+        solution = JointSolution(theta1=theta1, theta2=t2, theta3=t3, theta4=t4)
+        invalid_joints = _validate_limits(solution)
+        if not invalid_joints:
+            return solution
+        errors.append(
+            f"Elbow '{mode}' violates {', '.join(invalid_joints)}: "
+            f"θ=({solution.theta1:.3f},{solution.theta2:.3f},"
+            f"{solution.theta3:.3f},{solution.theta4:.3f})"
+        )
+
+    raise Unreachable(
+        f"No valid solution for (x={x:.3f}, y={y:.3f}, z={z:.3f}, "
+        f"pitch={pitch:.3f}). " + "; ".join(errors)
+    )
+
+
+def _validate_limits(solution: JointSolution):
+    """Return list of joint names that violate limits, or empty list if all OK."""
+    violations = []
+    for name, (lo, hi) in JOINT_LIMITS.items():
+        val = getattr(solution, "theta" + name[-1])
+        if val < lo - 1e-9 or val > hi + 1e-9:
+            violations.append(name)
+    return violations
+
+
+def _wrap_angle(val: float, lo: float, hi: float) -> float:
+    """Wrap *val* by ±2π to fit within [lo, hi]; return original if no wrap helps."""
+    for shift in (2 * math.pi, -2 * math.pi, 4 * math.pi, -4 * math.pi):
+        cand = val + shift
+        if lo - 1e-9 <= cand <= hi + 1e-9:
+            return cand
+    return val
 
 
 if __name__ == "__main__":
-    from .fk import forward_kinematics # import the forward kinematics function from the fk module
+    from .fk import forward_kinematics
 
-    sol = inverse_kinematics(x=0.15, y=0.05, z=0.10, pitch=-1.0, elbow="up")
-    print("IK solution:", sol)
+    # Auto elbow mode (try both, pick valid)
+    sol = inverse_kinematics(x=0.15, y=0.05, z=0.10, pitch=-0.3)
+    print("IK solution (auto):", sol)
     check = forward_kinematics(sol.theta1, sol.theta2, sol.theta3, sol.theta4)
-    print("FK of that solution (should match target):", check)
+    print("FK of that solution:", check)
+
+    # Force elbow down (also valid for this target)
+    sol2 = inverse_kinematics(x=0.15, y=0.05, z=0.10, pitch=-0.3, elbow="down")
+    print("IK solution (down):", sol2)
+
+    # Elbow up with steep pitch violates joint4 — auto mode will pick elbow down
+    try:
+        sol3 = inverse_kinematics(x=0.15, y=0.05, z=0.10, pitch=-1.0, elbow="up")
+        print("IK solution (up):", sol3)
+    except Exception as e:
+        print(f"elbow=up, pitch=-1.0: {e}")
+
+    print("auto, pitch=-1.0:", inverse_kinematics(x=0.15, y=0.05, z=0.10, pitch=-1.0))

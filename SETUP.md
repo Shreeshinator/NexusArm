@@ -81,7 +81,7 @@ ros2 launch modular_arm_bringup sim_bringup.launch.py
 
 ```bash
 ros2 service call /modular_arm/move_to modular_arm_interfaces/srv/MoveTo \
-  "{x: 0.15, y: 0.05, z: 0.10, pitch: -1.0, elbow: 'up', duration_sec: 2.0}"
+  "{x: 0.15, y: 0.05, z: 0.10, pitch: -0.3, elbow: 'up', duration_sec: 2.0}"
 ```
 - `pitch` is the end-effector angle in radians (0 = horizontal, -1.57 ≈ straight down).
 - `elbow` is `'up'` or `'down'` — picks between the two valid solutions.

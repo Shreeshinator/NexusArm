@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>modular_arm_teleop</name>
+  <version>0.1.0</version>
+  <description>Teleoperation node: reads Arduino leader arm over serial and commands the simulated arm.</description>
+  <maintainer email="user@example.com">user</maintainer>
+  <license>MIT</license>
+
+  <depend>rclpy</depend>
+  <depend>control_msgs</depend>
+  <depend>trajectory_msgs</depend>
+
+  <exec_depend>python3-serial</exec_depend>
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

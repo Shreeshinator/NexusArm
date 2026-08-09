@@ -8,5 +8,6 @@ def generate_launch_description():
             package="modular_arm_kinematics",
             executable="move_to_node",
             output="screen",
+            parameters=[{"use_sim_time": True}],
         ),
     ])

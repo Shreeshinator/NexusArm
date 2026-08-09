@@ -15,6 +15,8 @@ joint_state_broadcaster:
       - joint2
       - joint3
       - joint4
+      - finger_left_joint
+      - finger_right_joint
 
 arm_controller:
   ros__parameters:
@@ -23,6 +25,8 @@ arm_controller:
       - joint2
       - joint3
       - joint4
+      - finger_left_joint
+      - finger_right_joint
     command_interfaces:
       - position
     state_interfaces:

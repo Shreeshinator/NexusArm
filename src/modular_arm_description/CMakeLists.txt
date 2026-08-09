@@ -3,7 +3,7 @@ project(modular_arm_description)
 
 find_package(ament_cmake REQUIRED)
 
-install(DIRECTORY urdf launch config rviz
+install(DIRECTORY urdf launch config rviz worlds
   DESTINATION share/${PROJECT_NAME}
 )
 

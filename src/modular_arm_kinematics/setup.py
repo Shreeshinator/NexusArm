@@ -15,7 +15,7 @@ setup(
     ],
     install_requires=["setuptools"],
     zip_safe=True,
-    maintainer="Shreesh",
+    maintainer="Shreesh Tripathi",
     maintainer_email="shreeshtripathi13@gmail.com",
     description="FK/IK and move_to API for the modular 4-DOF arm.",
     license="Apache-2.0",

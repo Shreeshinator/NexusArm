@@ -4,7 +4,7 @@
   <name>modular_arm_description</name>
   <version>0.1.0</version>
   <description>URDF/Xacro model, RViz config, and Gazebo/ros2_control integration for the modular 4-DOF arm.</description>
-  <maintainer email="you@example.com">you</maintainer>
+  <maintainer email="shreeshtripathi13@gmail.com">Shreesh Tripathi</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>

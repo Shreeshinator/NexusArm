@@ -1,4 +1,6 @@
-"""Launch the arm in Gazebo Harmonic (gz sim) with ros2_control active.
+"""Launch the arm in Gazebo Harmonic (gz sim) with ros2_control active, a
+workspace world, and camera bridges.  For the full stack with move_to API and
+Foxglove, use sim_bringup.launch.py in modular_arm_bringup instead.
 
 Run:
     ros2 launch modular_arm_description gazebo.launch.py
@@ -9,26 +11,34 @@ from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription, RegisterEventHandler
 from launch.event_handlers import OnProcessExit
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import Command, LaunchConfiguration
+from launch.substitutions import Command
 from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    pkg_share = get_package_share_directory("modular_arm_description") # get the path to the package share directory
-    xacro_path = os.path.join(pkg_share, "urdf", "modular_arm.urdf.xacro") # get the path to the xacro file
-    ros_gz_sim_share = get_package_share_directory("ros_gz_sim") # get the path to the ros_gz_sim package share directory
+    """
+    Launches Gazebo Harmonic with a workspace world, spawns the arm,
+    loads controllers, and bridges cameras to ROS topics.
+    """
+    pkg_share = get_package_share_directory("modular_arm_description")
+
+    xacro_path = os.path.join(pkg_share, "urdf", "modular_arm.urdf.xacro")
+    world_path = os.path.join(pkg_share, "worlds", "workspace.sdf")
+
+    ros_gz_sim_share = get_package_share_directory("ros_gz_sim")
 
     robot_description = {
-    "robot_description": ParameterValue(Command(["xacro ", xacro_path]), value_type=str)
+        "robot_description": ParameterValue(
+            Command(["xacro ", xacro_path]), value_type=str
+        )
     }
 
-    # Start Gazebo Harmonic with an empty world
-    gz_sim = IncludeLaunchDescription( # Include the launch description for Gazebo Harmonic
-        PythonLaunchDescriptionSource( # for actually launching Gazebo Harmonic
+    gz_sim = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
             os.path.join(ros_gz_sim_share, "launch", "gz_sim.launch.py")
         ),
-        launch_arguments={"gz_args": "-r -v3 empty.sdf"}.items(),
+        launch_arguments={"gz_args": f"-r -v3 {world_path}"}.items(),
     )
 
     robot_state_publisher = Node(
@@ -38,7 +48,6 @@ def generate_launch_description():
         parameters=[robot_description, {"use_sim_time": True}],
     )
 
-    # Spawn the robot into the running Gazebo world from /robot_description
     spawn_entity = Node(
         package="ros_gz_sim",
         executable="create",
@@ -46,13 +55,64 @@ def generate_launch_description():
         output="screen",
     )
 
-    # Bridge sim clock so ROS nodes (controllers, rclpy nodes) use Gazebo time
     clock_bridge = Node(
         package="ros_gz_bridge",
         executable="parameter_bridge",
         arguments=["/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock"],
         output="screen",
     )
+
+    # Camera bridges: Gz image + camera_info -> ROS topics
+    camera_bridges = []
+
+    # Static front camera (world model)
+    for cam_name in ("cam_front",):
+        gz_prefix = f"/world/workspace/model/{cam_name}/link/camera_link/sensor/camera"
+        cam_bridges = [
+            Node(
+                package="ros_gz_bridge",
+                executable="parameter_bridge",
+                arguments=[f"{gz_prefix}/image@sensor_msgs/msg/Image[gz.msgs.Image"],
+                remappings=[(f"{gz_prefix}/image", f"/{cam_name}/image_raw")],
+                output="screen",
+            ),
+            Node(
+                package="ros_gz_bridge",
+                executable="parameter_bridge",
+                arguments=[
+                    f"{gz_prefix}/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo"
+                ],
+                remappings=[
+                    (f"{gz_prefix}/camera_info", f"/{cam_name}/camera_info")
+                ],
+                output="screen",
+            ),
+        ]
+        camera_bridges.extend(cam_bridges)
+
+    # Wrist camera (mounted on robot model "modular_arm")
+    wrist_prefix = "/world/workspace/model/modular_arm/link/wrist_camera_link/sensor/wrist_camera"
+    wrist_bridges = [
+        Node(
+            package="ros_gz_bridge",
+            executable="parameter_bridge",
+            arguments=[f"{wrist_prefix}/image@sensor_msgs/msg/Image[gz.msgs.Image"],
+            remappings=[(f"{wrist_prefix}/image", "/wrist_camera/image_raw")],
+            output="screen",
+        ),
+        Node(
+            package="ros_gz_bridge",
+            executable="parameter_bridge",
+            arguments=[
+                f"{wrist_prefix}/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo"
+            ],
+            remappings=[
+                (f"{wrist_prefix}/camera_info", "/wrist_camera/camera_info")
+            ],
+            output="screen",
+        ),
+    ]
+    camera_bridges.extend(wrist_bridges)
 
     joint_state_broadcaster_spawner = Node(
         package="controller_manager",
@@ -68,14 +128,13 @@ def generate_launch_description():
         output="screen",
     )
 
-    # Load controllers only after the robot has actually been spawned,
-    # otherwise the controller_manager service isn't up yet.
     delayed_broadcaster = RegisterEventHandler(
         event_handler=OnProcessExit(
             target_action=spawn_entity,
             on_exit=[joint_state_broadcaster_spawner],
         )
     )
+
     delayed_arm_controller = RegisterEventHandler(
         event_handler=OnProcessExit(
             target_action=joint_state_broadcaster_spawner,
@@ -88,6 +147,7 @@ def generate_launch_description():
         robot_state_publisher,
         clock_bridge,
         spawn_entity,
+        *camera_bridges,
         delayed_broadcaster,
         delayed_arm_controller,
     ])

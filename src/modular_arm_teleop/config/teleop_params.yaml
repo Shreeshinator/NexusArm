@@ -1,0 +1,65 @@
+/**:
+  ros__parameters:
+    serial_port: "/dev/ttyACM0"
+    baud_rate: 115200
+    publish_rate: 25.0
+    deadband: 3           # raw ADC — skip goal unless any pot or button changed &gt;3 LSBs
+    trajectory_duration_ms: 100
+
+    # ------------------------------------------------------------------
+    # Potentiometer calibration
+    # ------------------------------------------------------------------
+    # Pots: 270 deg rotation, mechanically used in middle ~180 deg.
+    # ADC 0-1023 maps to 0-270 deg physical rotation.
+    # Active travel: ADC 170 (45 deg) to ADC 853 (225 deg).
+    # Centre of active range = ADC 512 (135 deg).
+    pot_min: 170
+    pot_max: 853
+
+    # ------------------------------------------------------------------
+    # Joint mapping
+    # ------------------------------------------------------------------
+    # unit = (raw - pot_min) / (pot_max - pot_min)  clamped [0, 1]
+    # follower_angle = scale * unit + offset
+    #
+    # Follower rest pose: j1=0, j2=2.0, j3=-1.5, j4=-0.5
+
+    joint_mapping:
+
+      joint1:   # base yaw  |  512 = forward  |  +/-90 deg
+        scale: 3.14159
+        offset: -1.5708
+
+      joint2:   # shoulder  |  512 = forward  |  0 = almost fully back
+        scale: 3.0
+        offset: 0.5
+
+      joint3:   # elbow     |  512 = straight down  |  +/-90 deg
+        scale: 2.0
+        offset: -2.5
+
+      joint4:   # wrist     |  512 = centre  |  +/-90 deg
+        scale: 2.0
+        offset: -1.5
+
+    # ------------------------------------------------------------------
+    # Joint safety limits
+    # ------------------------------------------------------------------
+    joint_limits:
+      joint1: [-3.14159, 3.14159]
+      joint2: [-1.5708,  3.14159]
+      joint3: [-3.14159, 3.14159]
+      joint4: [-3.14159, 3.14159]
+
+    # ------------------------------------------------------------------
+    # Gripper
+    # ------------------------------------------------------------------
+    # Both fingers are prismatic joints commanded independently.
+    #   open  = 0.0      (finger at y=+/-7.5 mm)
+    #   close = 0.0075   (finger at y=0)
+    #
+    # Button D2 (INPUT_PULLUP, button -> GND):
+    #   0 (pressed)  -> close
+    #   1 (released) -> open
+    gripper_open_pos: 0.0
+    gripper_close_pos: 0.0075

@@ -70,7 +70,7 @@ ros2 launch modular_arm_bringup sim_bringup.launch.py
 
 # Command a Cartesian target
 ros2 service call /modular_arm/move_to modular_arm_interfaces/srv/MoveTo \
-  "{x: 0.15, y: 0.05, z: 0.10, pitch: -1.0, elbow: 'up', duration_sec: 2.0}"
+  "{x: 0.10, y: 0.05, z: 0.10, pitch: -0.3, elbow: '', duration_sec: 2.0}"
 ```
 
 ## Planned AI stack (high level)

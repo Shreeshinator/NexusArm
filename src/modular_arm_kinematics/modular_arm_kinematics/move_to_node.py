@@ -11,14 +11,16 @@ whole point of keeping this as its own package with its own service.
 Run standalone (with Gazebo + controllers already running):
     ros2 run modular_arm_kinematics move_to_node
 
-Call it:
+Call it (with gripper 0.0 = open, 1.0 = closed):
     ros2 service call /modular_arm/move_to modular_arm_interfaces/srv/MoveTo \
-        "{x: 0.15, y: 0.05, z: 0.10, pitch: -1.0, elbow: 'up', duration_sec: 2.0}"
+        "{x: 0.10, y: 0.05, z: 0.10, pitch: -0.3, elbow: '', gripper: 0.0, duration_sec: 2.0}"
 """
 import math
+import threading
 
 import rclpy
 from rclpy.action import ActionClient
+from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.node import Node
 
 from control_msgs.action import FollowJointTrajectory
@@ -28,15 +30,19 @@ from modular_arm_interfaces.srv import MoveTo
 
 from .ik import inverse_kinematics, Unreachable
 
-JOINT_NAMES = ["joint1", "joint2", "joint3", "joint4"]
+JOINT_NAMES = ["joint1", "joint2", "joint3", "joint4", "finger_left_joint", "finger_right_joint"]
 ACTION_NAME = "/arm_controller/follow_joint_trajectory"
+GRIPPER_MAX_TRAVEL = 0.016  # max travel before fingers touch (1 mm gap), must equal (gripper_spread - finger_width) / 2 - 0.001 in URDF
 
 
 class MoveToNode(Node):
     def __init__(self):
         super().__init__("move_to_node")
 
-        self._action_client = ActionClient(self, FollowJointTrajectory, ACTION_NAME)
+        self._action_client = ActionClient(
+            self, FollowJointTrajectory, ACTION_NAME,
+            callback_group=ReentrantCallbackGroup(),
+        )
         self._srv = self.create_service(MoveTo, "/modular_arm/move_to", self._handle_move_to)
 
         self.get_logger().info(f"move_to_node ready, waiting on action server '{ACTION_NAME}'")
@@ -48,7 +54,7 @@ class MoveToNode(Node):
                 y=request.y,
                 z=request.z,
                 pitch=request.pitch,
-                elbow=request.elbow or "up",
+                elbow=request.elbow if request.elbow in ("up", "down") else None,
             )
         except Unreachable as exc:
             response.success = False
@@ -61,22 +67,22 @@ class MoveToNode(Node):
             response.joint_angles = []
             return response
 
-        joint_angles = solution.as_list()
+        grip_factor = max(0.0, min(1.0, request.gripper))
+        finger_pos = grip_factor * GRIPPER_MAX_TRAVEL
+
+        joint_angles = solution.as_list() + [finger_pos, finger_pos]
         duration = request.duration_sec if request.duration_sec > 0.0 else 2.0
 
-        sent_ok = self._send_trajectory(joint_angles, duration)
+        sent_ok, sent_message = self._send_trajectory(joint_angles, duration)
         response.success = sent_ok
         response.joint_angles = joint_angles
-        response.message = (
-            "Trajectory goal sent." if sent_ok
-            else "Failed to reach the arm_controller action server."
-        )
+        response.message = sent_message
         return response
 
-    def _send_trajectory(self, joint_angles, duration_sec: float) -> bool:
+    def _send_trajectory(self, joint_angles, duration_sec: float):
         if not self._action_client.wait_for_server(timeout_sec=3.0):
             self.get_logger().error(f"Action server '{ACTION_NAME}' not available.")
-            return False
+            return False, f"Action server '{ACTION_NAME}' not available."
 
         goal = FollowJointTrajectory.Goal()
         goal.trajectory.joint_names = JOINT_NAMES
@@ -91,17 +97,46 @@ class MoveToNode(Node):
 
         goal.trajectory.points = [point]
 
-        self.get_logger().info(f"Sending trajectory goal: {joint_angles}")
-        self._action_client.send_goal_async(goal)
-        return True
+        self.get_logger().info(f"Sending trajectory: {[f'{a:.3f}' for a in joint_angles]}")
+
+        # Wait for the controller's accept/reject response WITHOUT re-entering
+        # the executor. rclpy.spin_until_future_complete() from inside a service
+        # callback uses the global executor and re-adds this node, which wedges
+        # the node. Instead, block on a threading.Event: the goal-response
+        # callback runs on a separate executor thread thanks to the
+        # ReentrantCallbackGroup on the action client.
+        responded = threading.Event()
+        response = {}
+
+        def on_goal_response(future):
+            response["handle"] = future.result()
+            responded.set()
+
+        future = self._action_client.send_goal_async(goal)
+        future.add_done_callback(on_goal_response)
+
+        if not responded.wait(timeout=5.0):
+            self.get_logger().error("Goal response timed out.")
+            return False, "Timed out waiting for the arm_controller goal response."
+
+        handle = response["handle"]
+        if handle is None:
+            self.get_logger().error("Goal rejected by action server.")
+            return False, "arm_controller rejected the trajectory goal."
+
+        self.get_logger().info("Goal accepted by action server.")
+        return True, "Trajectory goal accepted and sent."
 
 
 def main(args=None):
     rclpy.init(args=args)
     node = MoveToNode()
+    executor = rclpy.executors.MultiThreadedExecutor(num_threads=4)
+    executor.add_node(node)
     try:
-        rclpy.spin(node)
+        executor.spin()
     finally:
+        executor.shutdown()
         node.destroy_node()
         rclpy.shutdown()
 
