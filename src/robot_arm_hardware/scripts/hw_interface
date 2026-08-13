@@ -1,0 +1,6 @@
+#!/usr/bin/env python3
+"""Executable wrapper: launches the real-robot serial bridge node."""
+from robot_arm_hardware.hw_interface import main
+
+if __name__ == "__main__":
+    main()

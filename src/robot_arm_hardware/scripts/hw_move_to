@@ -1,0 +1,6 @@
+#!/usr/bin/env python3
+"""Executable wrapper: launches the real-robot Cartesian move_to service."""
+from robot_arm_hardware.hw_move_to import main
+
+if __name__ == "__main__":
+    main()

@@ -91,7 +91,7 @@ def generate_launch_description():
         camera_bridges.extend(cam_bridges)
 
     # Wrist camera (mounted on robot model "modular_arm")
-    wrist_prefix = "/world/workspace/model/modular_arm/link/wrist_camera_link/sensor/wrist_camera"
+    wrist_prefix = "/world/workspace/model/modular_arm/link/link4/sensor/wrist_camera"
     wrist_bridges = [
         Node(
             package="ros_gz_bridge",

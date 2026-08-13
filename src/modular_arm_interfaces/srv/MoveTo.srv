@@ -5,7 +5,7 @@ float64 x
 float64 y
 float64 z
 float64 pitch
-string elbow            # "up" or "down"
+string elbow            # "up" or "down" can also be "auto" to let the planner choose
 float64 gripper         # 0.0 = fully open, 1.0 = fully closed
 float64 duration_sec    # time to execute the trajectory, e.g. 2.0
 ---

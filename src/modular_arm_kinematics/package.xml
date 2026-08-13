@@ -4,7 +4,7 @@
   <name>modular_arm_kinematics</name>
   <version>0.1.0</version>
   <description>Pure-Python FK/IK for the modular 4-DOF arm, plus a ROS2 node exposing the move_to(x,y,z) API over a service and a FollowJointTrajectory action client.</description>
-  <maintainer email="shreeshtripathi13@gmail.com">Shreesh</maintainer>
+  <maintainer email="shreeshtripathi13@gmail.com">Shreesh Raj Tripathi</maintainer>
   <license>Apache-2.0</license>
 
   <depend>rclpy</depend>

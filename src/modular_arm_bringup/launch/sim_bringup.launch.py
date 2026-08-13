@@ -1,4 +1,5 @@
-"""One-command bringup: Gazebo Harmonic + arm + ros2_control + move_to API + cameras + Foxglove.
+"""
+One-command bringup: Gazebo Harmonic + arm + ros2_control + move_to API + cameras + Foxglove.
 
 Run:
     ros2 launch modular_arm_bringup sim_bringup.launch.py
@@ -7,24 +8,26 @@ Then in another terminal:
     ros2 service call /modular_arm/move_to modular_arm_interfaces/srv/MoveTo \
         "{x: 0.10, y: 0.05, z: 0.10, pitch: -0.3, elbow: '', gripper: 0.0, duration_sec: 2.0}"
 """
-import os
-from ament_index_python.packages import get_package_share_directory
-from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, TimerAction
-from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch_ros.actions import Node
+import os # for path joining
+from ament_index_python.packages import get_package_share_directory # for finding package share directories
+
+from launch import LaunchDescription # for creating launch descriptions
+from launch.actions import IncludeLaunchDescription, TimerAction # for including other launch files and scheduling actions
+from launch.launch_description_sources import PythonLaunchDescriptionSource # for including Python launch files
+
+from launch_ros.actions import Node # for launching ROS 2 nodes
 
 
 def generate_launch_description():
-    description_share = get_package_share_directory("modular_arm_description")
+    description_share = get_package_share_directory("robot_arm_description")
 
-    gazebo_launch = IncludeLaunchDescription(
+    gazebo_launch = IncludeLaunchDescription( # include the Gazebo launch file from the robot_arm_description package
         PythonLaunchDescriptionSource(
             os.path.join(description_share, "launch", "gazebo.launch.py")
         )
     )
 
-    foxglove = Node(
+    foxglove = Node( # foxglove_bridge node for visualizing ROS 2 topics such as camera feeds in Foxglove Studio
         package="foxglove_bridge",
         executable="foxglove_bridge",
         name="foxglove_bridge",
@@ -32,7 +35,7 @@ def generate_launch_description():
         parameters=[{"use_sim_time": True}],
     )
 
-    move_to_node = TimerAction(
+    move_to_node = TimerAction( # Start the move_to_node after a delay to ensure Gazebo and other nodes are up
         period=6.0,
         actions=[
             Node(
@@ -44,7 +47,7 @@ def generate_launch_description():
         ],
     )
 
-    return LaunchDescription([
+    return LaunchDescription([ # return the launch description containing all the nodes and actions to be launched
         gazebo_launch,
         foxglove,
         move_to_node,

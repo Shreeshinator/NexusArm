@@ -3,8 +3,8 @@
 <package format="3">
   <name>modular_arm_interfaces</name>
   <version>0.1.0</version>
-  <description>Custom service/message definitions for the modular 4-DOF arm. This is the stable API boundary future planners (LLM/VLA/vision) will call.</description>
-  <maintainer email="you@example.com">you</maintainer>
+  <description>Custom service/message definitions for the arm. This is the stable API boundary future planners (LLM/VLA/vision) will call.</description>
+  <maintainer email="shreeshtripathi13@gmail.com">Shreesh Raj Tripathi</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>

@@ -16,7 +16,6 @@ Call it (with gripper 0.0 = open, 1.0 = closed):
         "{x: 0.10, y: 0.05, z: 0.10, pitch: -0.3, elbow: '', gripper: 0.0, duration_sec: 2.0}"
 """
 import math
-import threading
 
 import rclpy
 from rclpy.action import ActionClient
@@ -32,7 +31,7 @@ from .ik import inverse_kinematics, Unreachable
 
 JOINT_NAMES = ["joint1", "joint2", "joint3", "joint4", "finger_left_joint", "finger_right_joint"]
 ACTION_NAME = "/arm_controller/follow_joint_trajectory"
-GRIPPER_MAX_TRAVEL = 0.016  # max travel before fingers touch (1 mm gap), must equal (gripper_spread - finger_width) / 2 - 0.001 in URDF
+GRIPPER_MAX_TRAVEL = 0.015  # max prismatic travel per finger, must match URDF upper limit
 
 
 class MoveToNode(Node):
@@ -67,10 +66,10 @@ class MoveToNode(Node):
             response.joint_angles = []
             return response
 
+        joint_angles = solution.as_list()
         grip_factor = max(0.0, min(1.0, request.gripper))
         finger_pos = grip_factor * GRIPPER_MAX_TRAVEL
-
-        joint_angles = solution.as_list() + [finger_pos, finger_pos]
+        joint_angles += [finger_pos, finger_pos]
         duration = request.duration_sec if request.duration_sec > 0.0 else 2.0
 
         sent_ok, sent_message = self._send_trajectory(joint_angles, duration)
@@ -99,39 +98,32 @@ class MoveToNode(Node):
 
         self.get_logger().info(f"Sending trajectory: {[f'{a:.3f}' for a in joint_angles]}")
 
-        # Wait for the controller's accept/reject response WITHOUT re-entering
-        # the executor. rclpy.spin_until_future_complete() from inside a service
-        # callback uses the global executor and re-adds this node, which wedges
-        # the node. Instead, block on a threading.Event: the goal-response
-        # callback runs on a separate executor thread thanks to the
-        # ReentrantCallbackGroup on the action client.
-        responded = threading.Event()
-        response = {}
-
-        def on_goal_response(future):
-            response["handle"] = future.result()
-            responded.set()
-
+        # Fire-and-forget: send the goal and return immediately.  The trajectory
+        # controller executes it asynchronously; we don't block a service thread
+        # (blocking inside a callback busy-loops the executor and pegs CPU).
         future = self._action_client.send_goal_async(goal)
-        future.add_done_callback(on_goal_response)
+        future.add_done_callback(self._on_goal_accepted)
+        return True, "Trajectory goal sent (accepted asynchronously)."
 
-        if not responded.wait(timeout=5.0):
-            self.get_logger().error("Goal response timed out.")
-            return False, "Timed out waiting for the arm_controller goal response."
-
-        handle = response["handle"]
+    def _on_goal_accepted(self, future):
+        try:
+            handle = future.result()
+        except Exception as exc:
+            self.get_logger().error(f"Goal response error: {exc}")
+            return
         if handle is None:
             self.get_logger().error("Goal rejected by action server.")
-            return False, "arm_controller rejected the trajectory goal."
-
+            return
         self.get_logger().info("Goal accepted by action server.")
-        return True, "Trajectory goal accepted and sent."
 
 
 def main(args=None):
     rclpy.init(args=args)
     node = MoveToNode()
-    executor = rclpy.executors.MultiThreadedExecutor(num_threads=4)
+    # Single-threaded executor: the node only serves /modular_arm/move_to and
+    # sends fire-and-forget action goals. A MultiThreadedExecutor spins idle
+    # threads (visible as 80%+ CPU) even with no callbacks.
+    executor = rclpy.executors.SingleThreadedExecutor()
     executor.add_node(node)
     try:
         executor.spin()

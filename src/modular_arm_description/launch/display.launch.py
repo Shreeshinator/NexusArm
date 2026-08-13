@@ -4,12 +4,12 @@ Good for a first sanity check of the URDF before touching Gazebo.
 Run:
     ros2 launch modular_arm_description display.launch.py
 """
-import os
-from ament_index_python.packages import get_package_share_directory
-from launch import LaunchDescription
+import os # for path joining etc.
+from ament_index_python.packages import get_package_share_directory # for finding package share directories (where the package is installed)
+from launch import LaunchDescription # LaunchDescription is the main class that describes a launch file
 from launch.actions import DeclareLaunchArgument
-from launch.substitutions import Command, LaunchConfiguration
-from launch_ros.parameter_descriptions import ParameterValue
+from launch.substitutions import Command, LaunchConfiguration # for substituting values in launch files, LaunchConfiguration is used to get the value of a launch argument
+from launch_ros.parameter_descriptions import ParameterValue # for setting parameters in ROS 2 nodes
 from launch_ros.actions import Node
 
 

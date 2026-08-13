@@ -204,29 +204,16 @@
     <limit lower="0" upper="${(gripper_spread - finger_width) / 2 - 0.001}" effort="1.0" velocity="0.1"/>
   </joint>
 
+  <xacro:include filename="$(find modular_arm_description)/urdf/modular_arm.gazebo.xacro"/>
+
   <!-- =========================================================
-       wrist camera: mounted on gripper_base, looks forward at
-       the grasp zone — critical for LeRobot policy training
+       wrist camera: sensor on gripper_base at offset pose,
+       looks forward at the grasp zone — critical for LeRobot
+       policy training
        ========================================================= -->
-  <link name="wrist_camera_link">
-    <visual>
-      <geometry><box size="0.006 0.006 0.006"/></geometry>
-      <material name="grey"/>
-    </visual>
-    <collision>
-      <geometry><box size="0.006 0.006 0.006"/></geometry>
-    </collision>
-    <xacro:simple_inertial mass="0.001" length="0.0" include_com="false"/>
-  </link>
-
-  <joint name="wrist_camera_joint" type="fixed">
-    <parent link="gripper_base"/>
-    <child link="wrist_camera_link"/>
-    <origin xyz="0.012 0.0 0.008" rpy="0 1.5708 0"/>
-  </joint>
-
-  <gazebo reference="wrist_camera_link">
+  <gazebo reference="gripper_base">
     <sensor name="wrist_camera" type="camera">
+      <pose>-0.06 0.0 -0.015 0 -0.5 0</pose>
       <always_on>true</always_on>
       <visualize>true</visualize>
       <update_rate>30</update_rate>
@@ -244,7 +231,5 @@
       </camera>
     </sensor>
   </gazebo>
-
-  <xacro:include filename="$(find modular_arm_description)/urdf/modular_arm.gazebo.xacro"/>
 
 </robot>

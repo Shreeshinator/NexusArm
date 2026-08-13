@@ -23,6 +23,7 @@ setup(
     entry_points={
         "console_scripts": [
             "move_to_node = modular_arm_kinematics.move_to_node:main",
+            "keyboard_teleop = modular_arm_kinematics.keyboard_teleop:main",
         ],
     },
 )
