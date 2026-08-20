@@ -33,9 +33,9 @@ SEG3 = (0.052, -0.008)  # joint4 -> gripper_link offset
 L1 = math.hypot(*SEG1)
 L2 = math.hypot(*SEG2)
 L3 = math.hypot(*SEG3)
-A1 = math.atan2(SEG1[1], SEG1[0])
-A2 = math.atan2(SEG2[1], SEG2[0])
-DELTA = A2 - A1
+A1 = math.atan2(SEG1[1], SEG1[0]) # the fixed shoulder->elbow in-plane angle
+A2 = math.atan2(SEG2[1], SEG2[0]) # the fixed elbow->wrist in-plane angle
+DELTA = A2 - A1 # the fixed in-plane angle between SEG1 and SEG2 (the "elbow bend" angle)
 
 
 def _rot(phi, vec):

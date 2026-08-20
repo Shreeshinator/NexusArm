@@ -19,7 +19,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 from sensor_msgs.msg import CompressedImage, Image, JointState
-from std_msgs.msg import String
+from std_msgs.msg import Float64MultiArray, String
 
 from lerobot.datasets.lerobot_dataset import LeRobotDataset
 # >>> CUSTOMIZE: on some lerobot versions the import path is
@@ -38,14 +38,20 @@ import cv2
 # Configuration defaults
 # ----------------------------------------------------------------------------
 # >>> CUSTOMIZE: topic names — check yours with `ros2 topic list`.
-DEFAULT_GRIPPER_CAM_TOPIC = "/gripper_cam/image_raw"
-DEFAULT_FRONT_CAM_TOPIC = "/front_cam/image_raw"
+# Real-arm bridge (camera_bridge) publishes CompressedImage (MJPEG passthrough):
+DEFAULT_GRIPPER_CAM_TOPIC = "/gripper_cam/image_raw/compressed"
+DEFAULT_FRONT_CAM_TOPIC = "/front_cam/image_raw/compressed"
 DEFAULT_JOINT_STATES_TOPIC = "/joint_states"
 # >>> CUSTOMIZE: the topic carrying *commanded* joint positions (what your
 #     controller / scripted policy publishes). This becomes `action`.
-#     Set to "" (empty) if you have none — the node then falls back to using
-#     the measured state as the action (see --action-fallback below).
-DEFAULT_JOINT_COMMANDS_TOPIC = "/joint_commands"
+#     Real arm: hw_move_to publishes /joint_command as Float64MultiArray
+#     (5 values: joint1..joint4, gripper).  Set to "" (empty) if you have none
+#     — the node then falls back to using the measured state as the action.
+DEFAULT_JOINT_COMMANDS_TOPIC = "/joint_command"
+# >>> CUSTOMIZE: message type of the command topic above.
+#     "float64"  -> std_msgs/Float64MultiArray (real arm)
+#     "joint"    -> sensor_msgs/JointState (sim)
+DEFAULT_JOINT_COMMANDS_TYPE = "float64"
 
 # >>> CUSTOMIZE: fixed joint ordering. JointState.name order is NOT guaranteed
 #     to be stable across publishers, so we always reindex by this list.
@@ -65,20 +71,28 @@ def parse_args():
                    help='Natural-language task, e.g. "pick up the red cube"')
     # >>> CUSTOMIZE: fps — must be <= the slowest camera's publish rate,
     #     otherwise consecutive frames will contain duplicated images.
-    p.add_argument("--fps", type=int, default=30)
+    p.add_argument("--fps", type=int, default=10)
     p.add_argument("--root", default=None,
                    help="Local dataset dir (default: ~/.cache/huggingface/lerobot/<repo-id>)")
     p.add_argument("--gripper-cam-topic", default=DEFAULT_GRIPPER_CAM_TOPIC)
     p.add_argument("--front-cam-topic", default=DEFAULT_FRONT_CAM_TOPIC)
     p.add_argument("--joint-states-topic", default=DEFAULT_JOINT_STATES_TOPIC)
     p.add_argument("--joint-commands-topic", default=DEFAULT_JOINT_COMMANDS_TOPIC)
+    p.add_argument("--joint-commands-type", choices=["float64", "joint"],
+                   default=DEFAULT_JOINT_COMMANDS_TYPE,
+                   help="Message type of the command topic: "
+                        "float64 (Float64MultiArray, real arm) or joint (JointState).")
     p.add_argument("--joint-names", nargs="*", default=DEFAULT_JOINT_NAMES,
                    help="Explicit joint ordering (recommended).")
+    p.add_argument("--cams", choices=["both", "gripper", "front"], default="both",
+                   help="Which cameras to record. Use one if the other is flaky.")
     p.add_argument("--action-fallback", choices=["state"], default="state",
                    help="What to use as `action` when no command topic exists.")
-    p.add_argument("--compressed", action="store_true",
+    p.add_argument("--compressed", action="store_true", default=True,
                    help="Camera topics are sensor_msgs/CompressedImage "
-                        "(e.g. .../image_raw/compressed).")
+                        "(default: real-arm bridge publishes MJPEG passthrough).")
+    p.add_argument("--raw", action="store_false", dest="compressed",
+                   help="Camera topics are raw sensor_msgs/Image (sim).")
     p.add_argument("--push", action="store_true", help="Push to the Hub at the end.")
     p.add_argument("--private", action="store_true", help="Push as a private repo.")
     return p.parse_args()
@@ -127,38 +141,48 @@ class LeRobotRecorder(Node):
         self.episodes_saved = 0
         self.finished = False
 
-        # >>> CUSTOMIZE: QoS — sim camera plugins (Gazebo/Isaac) usually publish
-        #     RELIABLE, but some use BEST_EFFORT. If a subscription connects but
-        #     never receives, switch reliability here.
+        # >>> CUSTOMIZE: QoS — for video you want BEST_EFFORT + depth=1:
+        #     drop stale frames instead of stalling/backpressuring on a slow
+        #     WiFi camera. (Reliable re-transmits and blocks; pointless on
+        #     loopback and harmful for streaming.)
         img_qos = QoSProfile(
-            reliability=ReliabilityPolicy.RELIABLE,
+            reliability=ReliabilityPolicy.BEST_EFFORT,
             history=HistoryPolicy.KEEP_LAST,
             depth=1,   # depth=1: we only ever want the newest frame
         )
 
         img_type = CompressedImage if args.compressed else Image
-        self.create_subscription(img_type, args.gripper_cam_topic,
-                                 lambda m: self._cache("gripper", m), img_qos)
-        self.create_subscription(img_type, args.front_cam_topic,
-                                 lambda m: self._cache("front", m), img_qos)
+        self.use_gripper = args.cams in ("both", "gripper")
+        self.use_front = args.cams in ("both", "front")
+
+        if self.use_gripper:
+            self.create_subscription(img_type, args.gripper_cam_topic,
+                                     lambda m: self._cache("gripper", m), img_qos)
+        if self.use_front:
+            self.create_subscription(img_type, args.front_cam_topic,
+                                     lambda m: self._cache("front", m), img_qos)
         self.create_subscription(JointState, args.joint_states_topic,
                                  lambda m: self._cache("state", m), 10)
+        self._cmd_is_float = args.joint_commands_type == "float64"
         if args.joint_commands_topic:
-            self.create_subscription(JointState, args.joint_commands_topic,
-                                     lambda m: self._cache("cmd", m), 10)
-        # >>> CUSTOMIZE: if your commands are NOT a JointState (e.g.
-        #     trajectory_msgs/JointTrajectory or std_msgs/Float64MultiArray),
-        #     change the message type above and adapt _extract_action() below.
+            if self._cmd_is_float:
+                self.create_subscription(Float64MultiArray, args.joint_commands_topic,
+                                         lambda m: self._cache("cmd", m), 10)
+            else:
+                self.create_subscription(JointState, args.joint_commands_topic,
+                                         lambda m: self._cache("cmd", m), 10)
 
         self.create_subscription(String, "/lerobot_recorder/command",
                                  self._on_command, 10)
 
         self.create_timer(1.0 / args.fps, self._tick)
+        cams = ", ".join(c for c in ("gripper", "front") if getattr(self, f"use_{c}"))
         self.get_logger().info(
             f"Waiting for messages on:\n"
             f"  {args.gripper_cam_topic}\n  {args.front_cam_topic}\n"
             f"  {args.joint_states_topic}"
             + (f"\n  {args.joint_commands_topic}" if args.joint_commands_topic else "")
+            + f"\n  (recording cams: {cams}, {args.fps} fps)"
         )
 
     # -- caching ---------------------------------------------------------
@@ -170,7 +194,11 @@ class LeRobotRecorder(Node):
     def _try_create_dataset(self):
         with self.lock:
             snap = dict(self.last)
-        if snap["gripper"] is None or snap["front"] is None or snap["state"] is None:
+        if snap["state"] is None:
+            return False
+        if self.use_gripper and snap["gripper"] is None:
+            return False
+        if self.use_front and snap["front"] is None:
             return False
 
         state_msg = snap["state"][0]
@@ -180,8 +208,8 @@ class LeRobotRecorder(Node):
             self.get_logger().warn(
                 f"No --joint-names given; locked joint order to: {self.joint_names}")
 
-        gripper_shape = image_msg_to_rgb(snap["gripper"][0]).shape
-        front_shape = image_msg_to_rgb(snap["front"][0]).shape
+        gripper_shape = image_msg_to_rgb(snap["gripper"][0]).shape if self.use_gripper else None
+        front_shape = image_msg_to_rgb(snap["front"][0]).shape if self.use_front else None
         n = len(self.joint_names)
 
         features = {
@@ -189,13 +217,15 @@ class LeRobotRecorder(Node):
                 "dtype": "float32", "shape": (n,), "names": self.joint_names},
             "action": {
                 "dtype": "float32", "shape": (n,), "names": self.joint_names},
-            "observation.images.gripper": {
-                "dtype": "video", "shape": gripper_shape,
-                "names": ["height", "width", "channels"]},
-            "observation.images.front": {
-                "dtype": "video", "shape": front_shape,
-                "names": ["height", "width", "channels"]},
         }
+        if self.use_gripper:
+            features["observation.images.gripper"] = {
+                "dtype": "video", "shape": gripper_shape,
+                "names": ["height", "width", "channels"]}
+        if self.use_front:
+            features["observation.images.front"] = {
+                "dtype": "video", "shape": front_shape,
+                "names": ["height", "width", "channels"]}
         # >>> CUSTOMIZE: add extra features here if useful — e.g. joint
         #     velocities ("observation.velocity", from JointState.velocity),
         #     gripper open/close as a separate scalar, or end-effector pose
@@ -206,7 +236,7 @@ class LeRobotRecorder(Node):
             fps=self.args.fps,
             root=self.args.root,
             features=features,
-            robot_type="sim_arm",   # >>> CUSTOMIZE: free-form label for metadata
+            robot_type="real_arm",   # >>> CUSTOMIZE: free-form label for metadata
             use_videos=True,
             # >>> CUSTOMIZE: image writer parallelism. Raise threads if
             #     add_frame can't keep up at your fps/resolution (watch for
@@ -236,6 +266,18 @@ class LeRobotRecorder(Node):
         #     Fallback: measured state (fine for state-cloning; alternatively
         #     post-process the dataset to shift next-state into action).
         if snap["cmd"] is not None:
+            if self._cmd_is_float:
+                # Float64MultiArray is already in the fixed joint order.
+                data = np.asarray(snap["cmd"][0].data, dtype=np.float32)
+                if data.shape[0] != len(self.joint_names):
+                    self.get_logger().warn(
+                        f"command has {data.shape[0]} values but expected "
+                        f"{len(self.joint_names)} joints; trimming/padding", throttle_duration_sec=5.0)
+                    out = np.zeros(len(self.joint_names), dtype=np.float32)
+                    k = min(len(self.joint_names), data.shape[0])
+                    out[:k] = data[:k]
+                    return out
+                return data
             return self._joint_vector(snap["cmd"][0])
         return self._joint_vector(snap["state"][0])
 
@@ -254,20 +296,26 @@ class LeRobotRecorder(Node):
         # Staleness guard: warn if a source stopped updating.
         # >>> CUSTOMIZE: 0.5 s threshold; tighten for fast tasks.
         for key in ("gripper", "front", "state"):
+            if (key == "gripper" and not self.use_gripper) or \
+               (key == "front" and not self.use_front):
+                continue
             if now - snap[key][1] > 0.5:
                 self.get_logger().warn(
                     f"'{key}' data is stale ({now - snap[key][1]:.2f}s old)",
                     throttle_duration_sec=1.0)
 
-        self.dataset.add_frame({
+        frame = {
             "observation.state": self._joint_vector(snap["state"][0]),
             "action": self._extract_action(snap),
-            "observation.images.gripper": image_msg_to_rgb(snap["gripper"][0]),
-            "observation.images.front": image_msg_to_rgb(snap["front"][0]),
             "task": self.args.task,
             # >>> CUSTOMIZE: for multi-task datasets, make the task dynamic
             #     (e.g. cache a String from a /current_task topic).
-        })
+        }
+        if self.use_gripper:
+            frame["observation.images.gripper"] = image_msg_to_rgb(snap["gripper"][0])
+        if self.use_front:
+            frame["observation.images.front"] = image_msg_to_rgb(snap["front"][0])
+        self.dataset.add_frame(frame)
         self.frames_in_episode += 1
 
     # -- episode control -----------------------------------------------------

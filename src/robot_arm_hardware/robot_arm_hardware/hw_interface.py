@@ -4,7 +4,7 @@ Subscribes to /joint_command (std_msgs/Float64MultiArray, 5 values:
 [joint1, joint2, joint3, joint4, gripper]) and forwards each command as a
 newline-terminated CSV line to the Arduino over serial.  Republishes the last
 commanded values as /joint_states (the real servos have no position feedback,
-so this is the commanded pose — the accepted approximation from the arch doc).
+so this is the commanded pose.
 
 This is the ONLY piece that differs between sim and real; everything upstream
 (move_to, teleop, LeRobot recorder) sees identical topics.  To run on Uno Q,
@@ -14,7 +14,7 @@ serial_port parameter to the in-container device path.
 Run:
     ros2 run robot_arm_hardware hw_interface --ros-args -p serial_port:=/dev/ttyACM0
 """
-import time
+import time # for the 2-second Arduino reset delay
 
 import rclpy
 from rclpy.node import Node
@@ -57,7 +57,7 @@ class HWInterface(Node):
             Float64MultiArray, "/joint_command", self._on_cmd, 10
         )
         self._pub = self.create_publisher(JointState, "/joint_states", 10)
-        self._timer = self.create_timer(1.0 / max(self._rate, 1.0), self._publish_state)
+        self._timer = self.create_timer(1.0 / max(self._rate, 1.0), self._publish_state) # timer for publishing joint states at the specified rate
         self.get_logger().info(f"hw_interface ready on {self._port} @ {self._baud}")
 
     def _on_cmd(self, msg: Float64MultiArray):

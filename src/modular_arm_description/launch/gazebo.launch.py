@@ -5,16 +5,19 @@ Foxglove, use sim_bringup.launch.py in modular_arm_bringup instead.
 Run:
     ros2 launch modular_arm_description gazebo.launch.py
 """
-import os
+import os # for path joining
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription, RegisterEventHandler
+# RegisterEventHandler is used to delay the start of the controller spawners until after the robot is spawned
+
 from launch.event_handlers import OnProcessExit
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command
 from launch_ros.parameter_descriptions import ParameterValue
-from launch_ros.actions import Node
+# ParameterValue is used to pass the robot_description parameter to the robot_state_publisher node
 
+from launch_ros.actions import Node
 
 def generate_launch_description():
     """
@@ -39,13 +42,13 @@ def generate_launch_description():
             os.path.join(ros_gz_sim_share, "launch", "gz_sim.launch.py")
         ),
         launch_arguments={"gz_args": f"-r -v3 {world_path}"}.items(),
-    )
+    ) # Launch Gazebo with the workspace world, verbose output, and paused
 
     robot_state_publisher = Node(
         package="robot_state_publisher",
         executable="robot_state_publisher",
         output="screen",
-        parameters=[robot_description, {"use_sim_time": True}],
+        parameters=[robot_description, {"use_sim_time": True}], # Dictionaries are used to pass parameters
     )
 
     spawn_entity = Node(
@@ -58,7 +61,7 @@ def generate_launch_description():
     clock_bridge = Node(
         package="ros_gz_bridge",
         executable="parameter_bridge",
-        arguments=["/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock"],
+        arguments=["/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock"], # bridge the clook topic from Gazebo to ROS for time synchronization
         output="screen",
     )
 

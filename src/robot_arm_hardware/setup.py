@@ -22,6 +22,8 @@ setup(
             "scripts/joint_keyboard_teleop",
             "scripts/hw_move_to",
             "scripts/keyboard_teleop",
+            "scripts/camera_bridge",
+            "scripts/lerobot_infer",
         ]),
     ],
     install_requires=["setuptools"],

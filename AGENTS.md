@@ -11,10 +11,11 @@ ROS2 **Jazzy** + **Gazebo Harmonic** colcon workspace for a 4-DOF printed arm (c
 
 ## Packages (`src/`)
 - `modular_arm_interfaces` — `MoveTo.srv`, the stable API boundary; must build before the rest.
-- `modular_arm_kinematics` — `fk.py`/`ik.py` are **pure Python, zero ROS deps**; `move_to_node.py` is the thin ROS wrapper; `keyboard_teleop.py` drives via `move_to`.
+- `modular_arm_kinematics` — `fk.py`/`ik.py` are **pure Python, zero ROS deps**; `move_to_node.py` is the thin ROS wrapper. The SIM keyboard teleop (`modular_arm_kinematics/keyboard_teleop.py`) drives the simulated arm via `move_to` and publishes the **commanded** joints on `/joint_commands` (plural, `JointState`) — note the sim teleop does **not** publish the recorder's `/joint_command` action source, so sim recordings need `--action-fallback state`. The real-arm Cartesian teleop lives in `robot_arm_hardware`.
 - **`robot_arm_description`** — the REAL arm: `robot_arm.urdf` (source of truth) + `robot_arm.urdf.xacro` (Gazebo copy), meshes, worlds, controllers, launch. **This is the active description package.** `modular_arm_description` is the old/legacy OMX-pattern sim and should be ignored/removed.
 - `modular_arm_bringup` — one-command sim bringup.
 - `modular_arm_teleop` — Arduino leader-arm teleop; currently uncommitted.
+- `robot_arm_hardware` — **REAL hardware**. `hw_interface.py` bridges `/joint_command` (Float64MultiArray, 5 values j1..j4+gripper) → Arduino Uno R3 over serial (CSV at 115200 baud, see `sketch/servo_bridge/`). `hw_move_to.py` is the Cartesian `MoveTo.srv` → joint trajectory server (same API as sim's `move_to_node.py`). `camera_bridge.py` pulls MJPEG (Motion JPEG — an endless HTTP stream of JPEG frames) from DroidCam/phone via `urllib.request` and republishes as `sensor_msgs/CompressedImage` on `/front_cam/image_raw/compressed` + `/gripper_cam/image_raw/compressed` (passthrough JPEG, no cv2 decode). `lerobot_infer.py` loads HF ACT policy `shreeshinator/arm-pick-blocks-act-first` and publishes `/joint_command` at `fps` (see LeRobot inference below). `keyboard_teleop.py` / `joint_keyboard_teleop.py` — Cartesian/joint teleops via MoveTo. Launch: `launch/real_arm.launch.py` (now declares `serial_port`/`baud_rate`), `launch/real_hw.launch.py`. Scripts `scripts/hw_interface`, `hw_move_to`, `camera_bridge`, `lerobot_infer` installed to `lib/robot_arm_hardware/` for `ros2 run`.
 
 ## Critical sync rules (the arm only works if these match)
 - **`robot_arm.urdf` is the source of truth.** The user edits it directly; `robot_arm.urdf.xacro` must be kept in sync (same links/joints/visuals) + it adds the wrist-camera `<gazebo>` block and the `robot_arm.gazebo.xacro` include. After editing the URDF, diff the two and mirror changes.
@@ -58,18 +59,61 @@ ROS2 **Jazzy** + **Gazebo Harmonic** colcon workspace for a 4-DOF printed arm (c
 - **DDS measurement trap:** `ros2 topic hz`/`topic list`/Python subscribers from a SEPARATE terminal may show "empty"/"unknown" due to cross-terminal DDS discovery — especially in this repo's dev environment. Verify camera/camera_info data via the same terminal that launched the sim, or via Foxglove.
 
 ## Teleop quirks (serial)
-- Needs `pyserial`; Arduino sketch at 115200 baud, CSV `j1,j2,j3,j4,btn`. Default port `/dev/ttyACM0` (needs udev perms).
+- Needs `pyserial` (pip name) → `python3-serial` (apt/rosdep key — see Package hygiene below); Arduino sketch at 115200 baud, CSV `j1,j2,j3,j4,btn`. Default port `/dev/ttyACM0` (needs udev perms).
 - `config/teleop_params.yaml` joint_mapping overrides the node's `declare_parameter` defaults when launched via `teleop.launch.py`.
+
+## Package & launch hygiene (common pitfalls)
+- **ament_python deps MUST be `<exec_depend>` not `<depend>`:** `robot_arm_hardware` is pure Python (`<build_type>ament_python</build_type>` — no C++ to compile). `<depend>` means build+export+exec; `<exec_depend>` means runtime only. The official demo `demo_nodes_py` (`/opt/ros/jazzy/share/demo_nodes_py/package.xml`) uses only `<exec_depend>` for `rclpy`/`std_msgs` etc. REP-149 defines `depend = build + build_export + exec`. We fixed `src/robot_arm_hardware/package.xml:10-14` to `exec_depend` for `rclpy`, `std_msgs`, `sensor_msgs`, `modular_arm_interfaces`, `python3-serial`.
+  - **rosdep key is `python3-serial`, not `pyserial`:** pip installs `pyserial` (`import serial`), but Ubuntu apt is `python3-serial` (`apt show python3-serial: Source: pyserial`). `rosdep/python.yaml` maps `python3-serial: {ubuntu: [python3-serial]}` — there is no `pyserial` key (`rosdep resolve pyserial` fails). Use `<exec_depend>python3-serial</exec_depend>`.
+- **Every `LaunchConfiguration` needs `DeclareLaunchArgument`:** Without it, `ros2 launch pkg file.py foo:=bar` is silently ignored (“unknown argument”). `src/robot_arm_hardware/launch/real_arm.launch.py:10-48` now declares `serial_port` (`/dev/ttyACM0` — the USB serial device file) + `baud_rate` (`115200` — bits per second, must match `Serial.begin()` in the Arduino sketch). Verify with `ros2 launch --show-args robot_arm_hardware real_arm.launch.py`.
 
 ## LeRobot data collection (in progress)
 - Recorder script: `lerobot-ros2-recorder.py` at repo root (extracted from `lerobot-ros2-recorder.md`).
-- **venv (with ROS visibility):** `~/lerobot_learning/.venv` (uv, `--system-site-packages`). Run recorder with `/home/shreeshinator/lerobot_learning/.venv/bin/python`. Contains lerobot 0.6.1 + datasets + h5py + **numpy pinned to 1.26.4** (must stay <2 — cv2 4.13.0 is NumPy 1.x ABI; NumPy 2.2.6 crashes the recorder).
+- **venv (with ROS visibility):** the repo-root `.venv` (uv, `include-system-site-packages=true`). Run recorder with `/home/shreeshinator/AI_Challenge_Robotic_Arm/.venv/bin/python`. Contains lerobot 0.6.1 + datasets + h5py + **numpy pinned to 1.26.4** (must stay <2 — cv2 4.13.0 headless is NumPy 1.x ABI; NumPy 2.2.6 crashes the recorder). Only `opencv-python-headless` is installed (the duplicate `opencv-python` was removed to avoid ABI conflicts).
 - Our camera topics are `/wrist_camera/image_raw` + `/cam_front/image_raw` (guide assumes `/gripper_cam` + `/front_cam` — rename when invoking).
-- `keyboard_teleop` (`ros2 run modular_arm_kinematics keyboard_teleop`) drives the arm via `/modular_arm/move_to` and publishes commanded joints on `/joint_commands` (the recorder's `action` source) + recorder commands on `/lerobot_recorder/command` (ENTER=start/save, t=discard, y=finish). START pose `(0.27, 0, 0.08, -1.57)` (grasp height).
-- `move_to` actions are Cartesian (x,y,z,pitch,gripper); the recorder records joint-space `action` from `/joint_commands`.
+- `keyboard_teleop` (`ros2 run robot_arm_hardware keyboard_teleop`) drives the arm via `/modular_arm/move_to`.  Controls in the SAME terminal:
+    w/a/s/d   X/Y coarse    i/j/k/l  X/Y fine
+    q/e      Z up/down     u/o      Z fine
+    r/f      pitch ±0.1    [ / ]    wrist (joint4) ±0.05
+    space    gripper toggle
+    x        print target
+    ENTER    recorder start/save   d  discard   q  finish
+    Ctrl-C   quit
+  - `[` / `]` tilt ONLY joint4 (the wrist) — the rest of the arm stays put; no IK redistribution.
+  - `r` / `f` do Cartesian pitch: x,y,z held fixed, IK redistributes shoulder/elbow/wrist together.
+  - All moves publish to `/joint_command`; the LeRobot recorder captures the joint-space `action` from this topic automatically.
+  - The teleop remembers the last solved joint angles from the `move_to` service response; wrist moves build on that last solution.
+START pose `(0.27, 0, 0.08, -1.57)` (grasp height).
+- `move_to` actions are Cartesian (x,y,z,pitch,gripper); on the real arm the recorder records joint-space `action` from `/joint_command` (Float64MultiArray, 5 values: j1..j4 + gripper).
 - Do NOT `pip install lerobot` into user site (it bumped setuptools to 81 which breaks colcon builds; setuptools must stay <80).
+
+**Episode management** (while recording with the venv recorder):
+- **Topic (recommended, works headless)**: `ros2 topic pub --once /lerobot_recorder/command std_msgs/String "{data: start|save|discard|finish}"`. `start` begins an episode, `save` finalizes the current one, `discard` drops it without saving, `finish` finalizes the last episode, pushes to HF Hub if `--push` was set, and exits the recorder.
+- **Keyboard** (only works in the same terminal as the recorder, with a TTY — stdin must not be closed):
+    - **ENTER** = start a new episode (or save the current one if recording).
+    - **d + ENTER** = discard the current episode without saving (clears the in-memory buffer).
+    - **q + ENTER** = finish recording entirely.
+- The recorder defaults to `--fps 10`; at 640×480 this matches ~2–5 Hz actual camera rate, so frames will duplicate if you go above ~3 fps unless you lower `--fps` or use 320×240.
+
+## LeRobot inference (ACT on real arm)
+- **Policy**: `shreeshinator/arm-pick-blocks-act-first` (ACT, chunk 100) trained on `shreeshinator/arm-picking-blocks-real` (front camera 480×640, 5 joints). **Task string must exactly match training**: `"place the block in the bowl"` (`lerobot_infer.py:101`).
+- **Nodes**:
+  - `camera_bridge.py` — MJPEG → `sensor_msgs/CompressedImage`. Params `front_url`/`gripper_url` (e.g. `http://phone:4747/video` for DroidCam, `http://esp32:81/stream`), `front_topic`/`gripper_topic`, `fps` (cap, default 15). Publishes **only new frames** (no duplicates) with `BEST_EFFORT depth=1 KEEP_LAST` — **publisher MUST be BEST_EFFORT or DDS RELIABLE↔BEST_EFFORT mismatch drops all images** (see `camera_bridge.py:58`).
+  - `lerobot_infer.py` — subscribes `/front_cam/image_raw/compressed` (`BEST_EFFORT`) + `/joint_states`, runs `ACTPolicy.select_action`, publishes `/joint_command` at `fps`. Run via venv Python:
+    `source /opt/ros/jazzy/setup.bash && .venv/bin/python -m robot_arm_hardware.lerobot_infer --ros-args -p enable_robot:=false` (dry-run, no motion) or `ros2 run robot_arm_hardware lerobot_infer --ros-args -p enable_robot:=true` (live). Installed as `lib/robot_arm_hardware/lerobot_infer` for `ros2 run` (see `setup.py:26`).
+- **Normalization (critical, was a bug)**: policy trained with `MEAN_STD`. Inference MUST load stats from HF `policy_preprocessor_step_3_normalizer_processor.safetensors` — **Visual** mean `[0.485,0.456,0.406]` std `[0.229,0.224,0.225]` (ImageNet, shape `3×1×1`), **State/Action** mean/std from same file. Pipeline: image `uint8 → float32/255 → (x-mean)/std` per channel (`_preprocess_image`), state `(raw-mean)/std` before `select_action`, action `norm*std+mean` after. **Bypasses `PolicyProcessorPipeline.from_pretrained`** — it hard-codes `device: cuda` and crashes CPU-only (`policy_preprocessor.json: device=cuda`). Manual math mirrors `lerobot/_NormalizationMixin._apply_transform`.
+- **QoS**: both sides `BEST_EFFORT depth=1 KEEP_LAST`. `camera_bridge` publishes compressed JPEG passthrough (no `cv2.imdecode` — saves CPU); `lerobot_infer` does `cv2.imdecode` + resize to 480×640 (`INTER_AREA`) if needed, validates `format=="jpeg"` and `msg.data`.
+- **Safety**: actions clamped to `JOINT_LIMITS` (`joint1 ±3.14`, `joint2-4 ±1.57`) + `GRIPPER_LIMITS [0,1]` before publish; logs `dist`/`maxΔ` vs current state and warns if `dist>2.0`.
+- **Auto-home**: `lerobot_infer` calls `/modular_arm/move_to` to `home_x/y/z/pitch/gripper` (`0.27,0,0.08,-1.57,0.0`) for `home_duration` (2s) + `home_delay` (0.5s settle) before policy loop. Disable with `-p auto_home:=false` or dry-run skips hardware (`enable_robot:=false` never calls the service).
+- **Chunk horizon**: trained `chunk_size=100`/`n_action_steps=100` (6.6s at 15Hz — too stale). `lerobot_infer.py:116` overrides to `n_action_steps:=10` (0.66s) for reactive control; `1` = fully reactive. `temporal_ensemble_coeff` disabled by default (`-1`).
+- **Runtime commands**: `ros2 topic pub --once /lerobot_infer/command std_msgs/String "{data: enable|disable|reset|home}"` — enable/disable publishing, reset policy queue, re-home.
+
+## Uno Q port (planned)
+- Target is **Docker on Uno Q + Uno R3 `servo_bridge.ino`** (decided: `UNO_Q_PORT_PLAN.md` at repo root). Uno Q is the Linux SBC “edge brain” (`sketch/servo_bridge/servo_bridge.ino:26` — “serial port bound into the Docker container”); Uno R3 remains the servo bridge over `/dev/ttyACM0` (the only place that does 5→6 logical→physical expansion).
+- Planned deliverables: `Dockerfile` (`FROM ros:jazzy` multi-arch, venv `/opt/venv --system-site-packages`, pins `lerobot==0.6.1`, `numpy==1.26.4`, `setuptools<80`), `docker-compose.yml` (`/dev/ttyACM0` + `network_mode: host` for DroidCam/HF), `src/robot_arm_hardware/launch/real_bringup.launch.py` (one-command `hw_interface`+`hw_move_to`+`camera_bridge`), `HARDWARE.md` + `sketch/servo_bridge/README.md` (wiring, calibration, flash).
+- Firmware trap: `servo_bridge.ino` (Uno, `yaw +318`, `wrist 477`, `PULSE_MIN 700`) vs `sketch/servo_bridge_esp32.ino` (dev ESP32, `yaw -318`, `wrist 318`, `PULSE_MIN 800`) — must standardize on one table before port.
 
 ## Repo hygiene
 - Branch is `working` with uncommitted changes incl. untracked `modular_arm_teleop/` and `sketch/`.
-- `.gitignore` covers `build/`, `install/`, `log/` at any depth but NOT `__pycache__/` or `.pytest_cache/` — avoid blind `git add .`.
+- `.gitignore` covers `build/`, `install/`, `log/` at any depth **and** `__pycache__/`, `*.pyc`, `.pytest_cache/` (fixed — was “NOT `__pycache__/`”); still avoid blind `git add .` (see `.gitignore:1-16`).
 - No CI, no pre-commit hooks.

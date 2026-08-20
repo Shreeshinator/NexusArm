@@ -15,11 +15,12 @@ Call it (with gripper 0.0 = open, 1.0 = closed):
     ros2 service call /modular_arm/move_to modular_arm_interfaces/srv/MoveTo \
         "{x: 0.10, y: 0.05, z: 0.10, pitch: -0.3, elbow: '', gripper: 0.0, duration_sec: 2.0}"
 """
-import math
+import math # MATH!
 
 import rclpy
 from rclpy.action import ActionClient
-from rclpy.callback_groups import ReentrantCallbackGroup
+from rclpy.callback_groups import ReentrantCallbackGroup 
+# ReentrantCallbackGroup allows callbacks to be called from multiple threads, which is useful for action clients that may have callbacks invoked from different threads.
 from rclpy.node import Node
 
 from control_msgs.action import FollowJointTrajectory
@@ -40,7 +41,7 @@ class MoveToNode(Node):
 
         self._action_client = ActionClient(
             self, FollowJointTrajectory, ACTION_NAME,
-            callback_group=ReentrantCallbackGroup(),
+            callback_group=ReentrantCallbackGroup() # Basicallly, it allows the node to process multiple service requests at the same time without blocking.
         )
         self._srv = self.create_service(MoveTo, "/modular_arm/move_to", self._handle_move_to)
 

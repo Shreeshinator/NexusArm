@@ -20,9 +20,9 @@ Controls (run the node, then press keys in the SAME terminal):
 Run:
     ros2 run modular_arm_kinematics keyboard_teleop
 """
-import select # for 
+import select 
 import sys 
-import termios # for tty.setraw which is used to read single keypresses
+import termios
 import threading
 import tty
 
@@ -44,10 +44,10 @@ START = {"x": 0.27, "y": 0.0, "z": 0.08, "pitch": -1.57}
 
 def _read_key_blocking():
     """Read one key press, returning an uppercase token or None on Ctrl-C."""
-    fd = sys.stdin.fileno()
-    old = termios.tcgetattr(fd)
+    fd = sys.stdin.fileno() # fd is the file descriptor for stdin (keyboard input, usually 0)
+    old = termios.tcgetattr(fd) # get the current terminal settings for stdin, because we will change them to raw mode to read one key at a time
     try:
-        tty.setraw(fd)
+        tty.setraw(fd) # set the terminal to raw mode, so we can read one key at a time without waiting for Enter
         while True:
             r, _, _ = select.select([fd], [], [], 0.1)
             if not r:

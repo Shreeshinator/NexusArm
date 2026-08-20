@@ -30,11 +30,12 @@ SEG1 = (0.047, 0.1925)  # joint2 -> joint3 offset in (h, z) plane
 SEG2 = (0.141, -0.001)  # joint3 -> joint4 offset in (h, z) plane
 SEG3 = (0.052, -0.008)  # joint4 -> gripper_link offset in (h, z) plane
 
+# Finding the lengths and angles of the segments in the (h, z) plane, which will be used in inverse kinematics calculations.
 L1 = math.hypot(*SEG1) # * is used to unpack the tuple into two arguments for hypot
 L2 = math.hypot(*SEG2)
 L3 = math.hypot(*SEG3)
-A1 = math.atan2(SEG1[1], SEG1[0])
-A2 = math.atan2(SEG2[1], SEG2[0])
+A1 = math.atan2(SEG1[1], SEG1[0]) # the in-plane angle of SEG1, used in inverse kinematics
+A2 = math.atan2(SEG2[1], SEG2[0]) # Same for SEG2
 DELTA = A2 - A1 # angle between SEG1 and SEG2, used in inverse kinematics
 
 
@@ -55,14 +56,15 @@ class Pose:
 
 def forward_kinematics(theta1: float, theta2: float, theta3: float, theta4: float) -> Pose:
     """Compute the gripper_link pose from joint angles (radians)."""
-    s1 = _rot(theta2, SEG1)
-    s2 = _rot(theta2 + theta3, SEG2)
-    s3 = _rot(theta2 + theta3 + theta4, SEG3)
+    s1 = _rot(theta2, SEG1) # rotate the shoulder segment by theta2
+    s2 = _rot(theta2 + theta3, SEG2) # rotate the elbow segment by theta2 + theta3
+    s3 = _rot(theta2 + theta3 + theta4, SEG3) # rotate the wrist segment by theta2 + theta3 + theta4
 
-    h = SHOULDER[0] + s1[0] + s2[0] + s3[0]
-    z = SHOULDER[1] + s1[1] + s2[1] + s3[1]
+    h = SHOULDER[0] + s1[0] + s2[0] + s3[0] # add up the horizontal components of the segments to get the total horizontal distance
+    z = SHOULDER[1] + s1[1] + s2[1] + s3[1] # add up the vertical components of the segments to get the total vertical distance
 
-    x = h * math.cos(theta1)
+    # Get the X and Y coordinates in the base frame by rotating the (h, z) coordinates by theta1 around the Z axis.
+    x = h * math.cos(theta1) 
     y = h * math.sin(theta1)
     pitch = -(theta2 + theta3 + theta4)
 

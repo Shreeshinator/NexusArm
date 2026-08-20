@@ -27,13 +27,13 @@ arm_controller:
       - joint4
       - finger_left_joint
       - finger_right_joint
-    command_interfaces:
+    command_interfaces: # which interfaces the controller will use to send commands to the joints
       - position
-    state_interfaces:
+    state_interfaces: # which interfaces the controller will use to read the state of the joints
       - position
       - velocity
     allow_partial_joints_goal: true
     open_loop_control: true
     constraints:
-      stopped_velocity_tolerance: 0.05
+      stopped_velocity_tolerance: 0.05 # the maximum allowed velocity when a joint is considered "stopped"
       goal_time: 0.5

@@ -1,4 +1,4 @@
-"""Launch the arm in RViz only, with joint_state_publisher_gui sliders."""
+"""Launch the new arm in RViz only, with joint_state_publisher_gui sliders."""
 
 import os
 from ament_index_python.packages import get_package_share_directory

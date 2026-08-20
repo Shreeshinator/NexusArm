@@ -7,10 +7,10 @@
   <maintainer email="user@example.com">user</maintainer>
   <license>MIT</license>
 
-  <depend>rclpy</depend>
-  <depend>std_msgs</depend>
-  <depend>sensor_msgs</depend>
-
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>modular_arm_interfaces</exec_depend>
   <exec_depend>python3-serial</exec_depend>
 
   <export>

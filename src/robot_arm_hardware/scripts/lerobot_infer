@@ -1,0 +1,6 @@
+#!/usr/bin/env python3
+"""Executable wrapper: ACT policy inference for the real arm."""
+from robot_arm_hardware.lerobot_infer import main
+
+if __name__ == "__main__":
+    main()

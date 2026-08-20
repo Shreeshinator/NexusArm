@@ -7,9 +7,9 @@ Usage:
     ros2 launch robot_arm_hardware real_arm.launch.py serial_port:=/dev/ttyACM0
 """
 from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
-
 
 def generate_launch_description():
     serial_port = LaunchConfiguration("serial_port", default="/dev/ttyACM0")
@@ -30,4 +30,19 @@ def generate_launch_description():
         output="screen",
     )
 
-    return LaunchDescription([hw_interface, hw_move_to])
+    return LaunchDescription(
+        [
+            DeclareLaunchArgument(
+                "serial_port",
+                default_value="/dev/ttyACM0",
+                description="Serial device for the Arduino Uno R3 servo bridge (e.g. /dev/ttyACM0 or /dev/ttyUSB0). Shown in `ros2 launch --show-args`.",
+            ),
+            DeclareLaunchArgument(
+                "baud_rate",
+                default_value="115200",
+                description="Baud rate (bits per second) for the serial link. Must match the Arduino sketch Serial.begin(...).",
+            ),
+            hw_interface,
+            hw_move_to,
+        ]
+    )

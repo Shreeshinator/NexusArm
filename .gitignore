@@ -1,3 +1,32 @@
 build/
 install/
 log/
+# nested colcon artifacts (if colcon ever run inside src/)
+**/build/
+**/install/
+**/log/
+
+# Python
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+**/.pytest_cache/
+*.egg-info/
+.eggs/
+
+# Python virtual environments
+venv/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db

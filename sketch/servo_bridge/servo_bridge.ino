@@ -1,7 +1,7 @@
 /*
  * servo_bridge.ino  —  Arduino Uno R3 real-robot servo bridge
  *
- * Receives 5 LOGICAL joint-angle values over serial (line-delimited CSV) and
+ * Receives 5 LOGICAL joint-angle (in RADIANS) values over serial (line-delimited CSV) and
  * drives 6 PHYSICAL hobby servos:
  *
  *     "<joint1>,<joint2>,<joint3>,<joint4>,<gripper>\n"
@@ -10,29 +10,27 @@
  *   gripper        : 0.0 (open) .. 1.0 (closed)
  *
  * Physical servo map (Uno R3 PWM pins):
- *   0  joint1  yaw        MG946R
- *   1  joint2  shoulder A  MG946R   (one side)
- *   2  joint2  shoulder B  MG946R   (opposite side, moves OPPOSITE)
- *   3  joint3  elbow       MG946R
- *   4  joint4  wrist       SG90
- *   5  gripper             SG90
+ *   3  joint1  yaw        MG946R
+ *   5  joint2  shoulder A  MG946R   (one side)
+ *   6  joint2  shoulder B  MG946R   (opposite side, moves OPPOSITE)
+ *   9  joint3  elbow       MG946R
+ *   10 joint4  wrist       SG90
+ *   11 gripper             SG90
  *
  * The SHOULDER is two servos mounted on opposite sides: when joint2 rotates +,
  * servo A goes + and servo B goes - (opposite pulse).  That is handled here by
  * giving shoulder B a NEGATIVE RAD_TO_US.  Everything upstream (ROS / LeRobot)
  * only ever sees the single logical "joint2" angle — the 5->6 expansion is the
  * firmware's job and this file is the ONLY place it lives.
- *
- * This node knows nothing about ROS, LeRobot, or arm calibration — it just maps
- * a logical joint angle to PWM pulses via the per-servo CALIBRATION table.  Tune
- * that table for the servos.  The exact same firmware runs on the
- * R3 today and on Uno Q later (Linux just sends these lines to the serial port
+
+ * The exact same firmware runs on the
+ * R3 with PC and on Uno Q (Linux just sends these lines to the serial port
  * bound into the Docker container).
  *
  * POWER: 6 servos need a proper 5-6 V external supply, NOT USB power.
  */
 
-#include <Servo.h>
+#include <Servo.h> // The servo library
 
 const int NUM_SERVOS = 6;
 const int SERVO_PINS[6] = {3, 5, 6, 9, 10, 11}; // PWM pins on the Arduino Uno R3
@@ -40,30 +38,33 @@ const int SERVO_PINS[6] = {3, 5, 6, 9, 10, 11}; // PWM pins on the Arduino Uno R
 Servo servos[6];
 
 // ---------- Calibration (TUNE FOR YOUR ACTUAL SERVOS) ----------
-// pulse_us = CENTER_US[i] + RAD_TO_US[i] * angle_rad   (arm servos)
-
-//   CENTER_US[i] : PWM pulse (us) when that logical joint angle is 0
-//   RAD_TO_US[i] : us per radian (SIGN sets direction; flip if reversed)
+//   RAD_TO_US[i] : us per radian, flip if reversed
 // MG946R ~180 deg: full sweep ~1000..2000 us.  SG90 wrist similar.
-// Start conservative (PULSE_MIN/MAX) and expand only after measuring real travel.
+
 const float CENTER_US[6] = {1500.0, 1500.0, 1500.0, 1500.0, 1500.0, 1500.0};
-const float RAD_TO_US[6] = { 318.0,  318.0, -318.0,  318.0,  318.0,  0.0};
-//   index 2 (shoulder B) is NEGATIVE -> moves opposite to shoulder A (index 1).
+const float RAD_TO_US[6] = { 318.0,  318.0, -318.0,  318.0,  477.0,  0.0};
+
+//   index 2 (shoulder B) - always moves opposite to shoulder A (index 1).
 //   index 5 (gripper) is unused here; gripper has its own 0..1 mapping below.
 
-// Gripper (SG90) maps the 0..1 command to its own pulse range directly.
-const int GRIP_OPEN_US   = 1000;   // gripper command = 0.0
-const int GRIP_CLOSED_US = 2000;   // gripper command = 1.0
+// Important: the wrist SG90 should rotate close to 90 deg (1.57 rad) in either direction, increase the RAD_TO_US[4] to 477 to get maximum possible range (if it is a 60 deg servo).
+// If the SG90 is a 90, deg servo, leave it to 318
 
-const int PULSE_MIN = 800;         // hard safety clamp on every pulse
-const int PULSE_MAX = 2200;
+//   the clamp below is widened to 700-2300 to let the wrist physically reach max possible range.
+
+// Gripper (SG90) maps the 0 - 1 command to its own pulse range directly.
+const int GRIP_OPEN_US   = 1250;   // gripper command = 0.0
+const int GRIP_CLOSED_US = 1800;   // gripper command = 1.0
+
+const int PULSE_MIN = 700;         // hard safety clamp on every pulse
+const int PULSE_MAX = 2300;
 
 // Logical joint limits (radians; gripper 0..1). Must match robot_arm.urdf.
 const float JOINT_LIMIT[5][2] = {
-  {-3.14159, 3.14159},  // joint1 yaw
-  {-1.57080, 1.57080},  // joint2 shoulder
-  {-1.57080, 1.57080},  // joint3 elbow
-  {-1.57080, 1.57080},  // joint4 wrist
+  {-3.14159, 3.14159},  // joint1 yaw,      rotates full circle
+  {-1.57080, 1.57080},  // joint2 shoulder, rotates 90 degree in either direction, 0 is straight up
+  {-1.57080, 1.57080},  // joint3 elbow    rotates 90 degree in either direction, 0 is straight out
+  {-1.57080, 1.57080},  // joint4 wrist,   rotates 90 degree in either direction, 0 is straight out
   { 0.00000, 1.00000},  // gripper
 };
 
@@ -77,6 +78,8 @@ void writePulse(int i, float us) {
 }
 
 void applyPose(const float c[5]) {
+  // Don't need to constrain here; parseAndApply already does that.  But we do need to convert logical joint angles to physical servo pulses.
+
   // joint1 yaw
   writePulse(0, CENTER_US[0] + RAD_TO_US[0] * c[0]);
 
@@ -97,14 +100,12 @@ void applyPose(const float c[5]) {
   writePulse(5, (float)(GRIP_OPEN_US + g * (GRIP_CLOSED_US - GRIP_OPEN_US)));
 }
 
-void parseAndApply(const String& line) { // args: takes a line of CSV joint angles by reference, parses it, and applies the pose
+void parseAndApply(const String& line) {
   float v[5];     // temporary array to hold parsed joint angles
   int idx = 0;    // index for the v array
   int start = 0;  // start index for substring extraction
 
-  for (int i = 0; i <= line.length(); i++) { // loop through the line, including one extra iteration to handle the last value (because the last value may not be followed by a comma)
-
-  // the length method in C++ returns the number of characters in the string, and the loop goes one past that to ensure the last value is processed
+  for (int i = 0; i <= line.length(); i++) { // loop through the line, including one extra iteration to handle the last value (because the last value is not followed by a comma)
 
     if (i == line.length() || line.charAt(i) == ',') { // if we reach the end of the line or find a comma, we extract the substring and convert it to float
       if (idx < 5) { // if we haven't filled the v array yet, we extract the substring from start to i and convert it to float.
@@ -117,29 +118,31 @@ void parseAndApply(const String& line) { // args: takes a line of CSV joint angl
     }
   }
   if (idx == 5) {
-    for (int j = 0; j < 5; j++) lastCmd[j] = v[j];
-    applyPose(v);
+    for (int j = 0; j < 5; j++) lastCmd[j] = v[j]; // store the last commanded pose
+    applyPose(v); // Finally, apply the pose to the servos
   }
 }
 
 void setup() {
   Serial.begin(115200);
-  for (int i = 0; i < NUM_SERVOS; i++) servos[i].attach(SERVO_PINS[i]); // attach each servo to its corresponding PWM pin
+  for (int i = 0; i < NUM_SERVOS; i++) servos[i].attach(SERVO_PINS[i]);
   float home[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
   applyPose(home);                 // safe home before accepting commands
-  lastCmdMs = millis();
-  pinMode(LED_BUILTIN, OUTPUT);
+  lastCmdMs = millis();            // home is the last commanded pose
+  pinMode(LED_BUILTIN, OUTPUT);    // built-in LED blinks to show the firmware is alive
 }
 
 void loop() {
   while (Serial.available()) {
     String line = Serial.readStringUntil('\n');
     line.trim(); // remove any leading/trailing whitespace or newline characters
+
     if (line.length() > 0) {
       parseAndApply(line);
       lastCmdMs = millis();
     }
   }
+
   static unsigned long ledT = 0;
   if (millis() - ledT > 500) {
     digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));

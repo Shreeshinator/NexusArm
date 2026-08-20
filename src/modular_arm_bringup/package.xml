@@ -3,7 +3,7 @@
 <package format="3">
   <name>modular_arm_bringup</name>
   <version>0.1.0</version>
-  <description>Top-level launch files that bring up the full stack: Gazebo + robot + controllers + kinematics node. This is the one entry point future modules (vision/LLM/VLA launch files) should depend on.</description>
+  <description>Top-level launch files that bring up the full stack: Gazebo + robot + controllers + kinematics node.</description>
   <maintainer email="shreeshtripathi13@gmail.com">Shreesh Raj Tripathi</maintainer>
   <license>Apache-2.0</license>
 

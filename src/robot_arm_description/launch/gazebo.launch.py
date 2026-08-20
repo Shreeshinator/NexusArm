@@ -5,14 +5,15 @@ Foxglove, use sim_bringup.launch.py in modular_arm_bringup instead.
 Run:
     ros2 launch robot_arm_description gazebo.launch.py
 """
-import os
+import os # for path manipulations
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, RegisterEventHandler, TimerAction
-from launch.event_handlers import OnProcessExit
+from launch.actions import IncludeLaunchDescription, RegisterEventHandler, TimerAction # RegisterEventHandler is used to delay the wrist camera bridges until after the robot is spawned
+from launch.event_handlers import OnProcessExit # for delaying the wrist camera bridges until after the robot is spawned
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command
-from launch_ros.parameter_descriptions import ParameterValue
+
+from launch_ros.parameter_descriptions import ParameterValue # for robot_description parameter
 from launch_ros.actions import Node
 
 

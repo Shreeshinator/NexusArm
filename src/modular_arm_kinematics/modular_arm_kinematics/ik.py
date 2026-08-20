@@ -1,4 +1,5 @@
-"""Analytical inverse kinematics for the real robot arm.
+"""
+Analytical inverse kinematics for the real robot arm.
 
 Standard decoupled approach for a yaw + 3R-planar arm, matching fk.py and the URDF geometry:
 
@@ -17,7 +18,7 @@ import math
 from dataclasses import dataclass
 from typing import List
 
-from .fk import SHOULDER, L1, L2, L3, A1, A2, DELTA, SEG3, _rot
+from .fk import SHOULDER, L1, L2, L3, A1, A2, DELTA, SEG3, _rot # the fixed geometry of the arm, in the same units as the target (meters, radians) and the _rot function for computing the wrist centre from the target pose.
 
 # Joint angle limits (radians) — keep in sync with robot_arm.urdf.xacro
 JOINT_LIMITS = {
@@ -27,8 +28,7 @@ JOINT_LIMITS = {
     "joint4": (-1.57, 1.57),
 }
 
-A3 = math.atan2(SEG3[1], SEG3[0])
-
+A3 = math.atan2(SEG3[1], SEG3[0]) # the in-plane angle of SEG3 (the fixed wrist->gripper offset), used in inverse kinematics
 
 class Unreachable(Exception):
     """Raised when a target pose is outside the arm's workspace."""
@@ -64,15 +64,16 @@ def inverse_kinematics(
     Raises:
         Unreachable: if no valid solution exists within joint limits.
     """
-    theta1 = math.atan2(y, x)
+    # Inverse kinematics for the first joint (base rotation) is straightforward: it's just the angle to the target position in the XY plane
+    theta1 = math.atan2(y, x) 
     h = x * math.cos(theta1) + y * math.sin(theta1)
 
     # Wrist centre: subtract the fixed wrist->gripper segment (rotated by pitch).
     # World angle of SEG3 = A3 + pitch (because Ry rotation gives A - theta, and
     # the sum theta2+theta3+theta4 = -pitch).
     s3_world_angle = A3 + pitch
-    hw = h - L3 * math.cos(s3_world_angle)
-    zw = z - L3 * math.sin(s3_world_angle)
+    hw = h - L3 * math.cos(s3_world_angle) # the wrist centre's horizontal distance from the shoulder joint
+    zw = z - L3 * math.sin(s3_world_angle)  # the wrist centre's vertical distance from the shoulder joint
 
     # 2-link shoulder/elbow solve in (h, z) relative to the shoulder joint.
     u = hw - SHOULDER[0]
@@ -89,7 +90,7 @@ def inverse_kinematics(
 
     cos_gamma = (d2 - L1 * L1 - L2 * L2) / (2 * L1 * L2)
     cos_gamma = max(-1.0, min(1.0, cos_gamma))
-    gamma_mag = math.acos(cos_gamma)
+    gamma_mag = math.acos(cos_gamma) # gamma is the angle between SEG1 and SEG2, in the plane of the arm, which is the angle between the shoulder and elbow joints (the "elbow angle"). The "up" solution has gamma > 0, the "down" solution has gamma < 0.
 
     candidates = []
     if elbow is None:
@@ -103,7 +104,7 @@ def inverse_kinematics(
     for mode in candidates:
         gamma = gamma_mag if mode == "up" else -gamma_mag  # angle between SEG1 and SEG2
 
-        # Standard 2-link: psi1 = world angle of SEG1
+        # Standard 2-link: psi1 = world angle of SEG1(the shoulder segment) in the (h, z) plane.
         #   u = L1*cos(psi1) + L2*cos(psi1 + beta)
         #   where beta = psi2 - psi1 = DELTA - theta3 is the elbow angle.
         psi1 = math.atan2(v, u) - math.atan2(

@@ -13,8 +13,7 @@ from ament_index_python.packages import get_package_share_directory # for findin
 
 from launch import LaunchDescription # for creating launch descriptions
 from launch.actions import IncludeLaunchDescription, TimerAction # for including other launch files and scheduling actions
-from launch.launch_description_sources import PythonLaunchDescriptionSource # for including Python launch files
-
+from launch.launch_description_sources import PythonLaunchDescriptionSource # for including launch files written in Python
 from launch_ros.actions import Node # for launching ROS 2 nodes
 
 
@@ -27,12 +26,18 @@ def generate_launch_description():
         )
     )
 
-    foxglove = Node( # foxglove_bridge node for visualizing ROS 2 topics such as camera feeds in Foxglove Studio
-        package="foxglove_bridge",
-        executable="foxglove_bridge",
-        name="foxglove_bridge",
-        output="screen",
-        parameters=[{"use_sim_time": True}],
+    # Foxglove bridge is started after a delay to ensure everything else is alive
+    foxglove = TimerAction(
+        period=8.0,  # 8 seconds seems good, you can adjust.
+        actions=[
+            Node(
+                package="foxglove_bridge",
+                executable="foxglove_bridge",
+                name="foxglove_bridge",
+                output="screen",
+                parameters=[{"use_sim_time": True}],
+            )
+        ],
     )
 
     move_to_node = TimerAction( # Start the move_to_node after a delay to ensure Gazebo and other nodes are up
@@ -47,7 +52,7 @@ def generate_launch_description():
         ],
     )
 
-    return LaunchDescription([ # return the launch description containing all the nodes and actions to be launched
+    return LaunchDescription([ # return the launch description
         gazebo_launch,
         foxglove,
         move_to_node,
