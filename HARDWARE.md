@@ -137,19 +137,21 @@ dmesg | tail; ls -l /dev/ttyACM0  # heartbeat LED blinks 500 ms if alive
 If fails: unplug/replug Uno R3, `groups` must contain `dialout` (re-login after `sudo usermod -aG dialout $USER`), or flash from laptop via Arduino IDE instead (same sketch, same port).
 
 ### Step 5 — FIX 10GB ROOT FIRST (MANDATORY — 2 min) then Build
-**YOUR CASE: root 10GB with 7-8GB used = only 2GB free. Slim alone CANNOT fit (not even Option C) — Docker stores everything in `/var/lib/docker` on root. Do this ONCE:**
+**YOUR CASE: root 10GB with 9.1GB used = 239M free (98%). Slim alone CANNOT fit (not even Option C) — Docker stores everything in `/var/lib/docker` on root. Your `18G /home/arduino` has 17G free — Docker must go there:**
 
 ```bash
 # Inside Uno Q (VS Code Terminal):
-df -h  # confirm: / is 10G 80%, /home has space
-docker builder prune -f; docker image prune -f  # safe clean only
+df -h  # confirm: / is 9.8G 98% 239M free, /home/arduino is 18G 4% 17G free
+docker builder prune -f; docker image prune -f  # safe clean only, keeps App Lab
 sudo systemctl stop docker.socket; sudo systemctl stop docker
-sudo mkdir -p /home/docker
-echo '{"data-root":"/home/docker"}' | sudo tee /etc/docker/daemon.json
-sudo rsync -a /var/lib/docker/ /home/docker/
-sudo systemctl start docker; df -h  # / now ~60%, Docker lives on /home forever
+sudo mkdir -p /home/arduino/docker
+echo '{"data-root":"/home/arduino/docker"}' | sudo tee /etc/docker/daemon.json
+sudo rsync -a /var/lib/docker/ /home/arduino/docker/  # copy to 17G partition (1-2 min)
+sudo rm -rf /var/lib/docker  # free root (optional, already copied)
+sudo systemctl start docker; df -h  # / now ~60%, Docker Root Dir: /home/arduino/docker
+docker info 2>/dev/null | grep "Docker Root Dir"  # must be /home/arduino/docker
 ```
-> This is NOT the scary "partition" you feared — no resizing, no wipe. One `echo` line tells Docker "store on /home". Reversible: `sudo rm /etc/docker/daemon.json && sudo systemctl restart docker` to undo.
+> This is NOT the scary "partition" you feared — no resizing, no wipe. One `echo` line tells Docker "store on /home/arduino". Reversible: `sudo rm /etc/docker/daemon.json && sudo systemctl restart docker` to undo. **Critical: `/home/docker` is still on root (239M) — must be `/home/arduino/docker` (17G).**
 
 **What happens next:** `docker compose build` reads **slim** `Dockerfile` (`ros:jazzy-ros-base`, not full desktop) and downloads ~1 GB multi-arch (first time 5-10 min slower on 2GB RAM Uno Q). It creates venv `lerobot==0.6.1` (auto `numpy 2.1.x` + `opencv 5.0`, NOT `1.26.4` bug) + `setuptools 79` + CPU `torch`, copies `src/`, runs `colcon build`. `docker compose up -d` creates `arm-stack` (`Creating arm-stack ... done`), mounts `src/` + `/dev/ttyACM0` + `host` network, runs `sleep infinity` — idle, no ROS auto-started. `docker compose ps` proves `Up`.
 
@@ -216,6 +218,64 @@ cd ~/NexusArm && docker compose up -d
 # Terminal 2 (W1): docker compose exec arm bash → source ... → ros2 topic hz / service tests
 # Terminal 3 (W2): docker compose exec arm bash → inference / recorder
 ```
+
+### FULL COMMAND LIST — EVERYTHING WORKING (no rebuild, live install okay, copy-paste in order)
+
+**You already pulled `shreeshinator/nexusarm:unoq 7.15GB` → `/home/arduino/docker` 17G. This list fixes all remaining 1-day blockers (meshes `890645f`, `numpy 2.1`, `av 14.2`, `torch A53 illegal`, `HF_TOKEN`, `service call` syntax, `venv` path) without rebuilding image:**
+
+```bash
+# 0. Verify fixes already done (should be ✅):
+df -h  # / 9.8G ~60%, /home/arduino 18G ~2G used
+cat /etc/docker/daemon.json  # {"data-root":"/home/arduino/docker"}
+docker info 2>/dev/null | grep "Docker Root Dir"  # /home/arduino/docker
+docker images | grep nexusarm  # shreeshinator/nexusarm:unoq 7.15GB
+find src/robot_arm_description/meshes -type l | wc -l  # 0 (real STLS vendored)
+
+# 1. Fix image name mismatch (image is shreeshinator/nexusarm:unoq, compose expects nexusarm-arm:latest):
+docker tag shreeshinator/nexusarm:unoq nexusarm-arm:latest
+docker compose up -d --no-build
+docker compose ps  # arm-stack Up (sleep infinity)
+
+# 2. VS Code SSH + = 3 terminals. In EVERY terminal:
+docker compose exec arm bash
+source /opt/ros/jazzy/setup.bash && source /workspace/install/setup.bash && source /opt/venv/bin/activate
+# prompt → (venv) root@...:/workspace#  — venv is /opt/venv, NOT .venv (host only, .venv/bin/python: No such file inside Docker)
+# check: which python → /opt/venv/bin/python , echo $VIRTUAL_ENV → /opt/venv
+
+# 3. Terminal 1 (W0) KEEP OPEN — arm + cameras at 15Hz:
+ros2 launch robot_arm_hardware real_bringup.launch.py serial_port:=/dev/ttyACM0 front_url:=http://<PHONE_IP>:4747/video fps:=15.0
+# front_url must be same WiFi as Uno Q, test http://<PHONE_IP>:4747/video in laptop browser first
+
+# 4. Terminal 2 (W1) — verify (while W0 blocking):
+ros2 topic hz /front_cam/image_raw/compressed  # ~13-15Hz
+ros2 topic echo /joint_states --once
+# Correct service call syntax (space after colon!):
+ros2 service call /modular_arm/move_to modular_arm_interfaces/srv/MoveTo "{x: 0.27, y: 0.0, z: 0.08, pitch: -1.57, gripper: 0.0, duration_sec: 1.5}"
+# NOT "{x:0.27}" (no space → Failed to populate field)
+
+# 5. Terminal 3 (W2) — LIVE FIX av + torch inside container (no rebuild, installing is okay):
+# av was 18.1.0 False (no av.option) → downgrade to wheel that has av.option:
+pip show av | grep Version  # 18.1.0
+pip uninstall -y av
+pip install --no-cache-dir --only-binary=av "av==14.2.0"  # 12.3.0/14.2.0/15.0 have av.option
+python -c "import av; print(av.__version__, hasattr(av,'option'))"  # 14.2.0 True
+# torch 2.11 has dotprod → Illegal instruction on A53 (QRB2210) → downgrade to baseline without dotprod:
+pip show torch | grep Version  # 2.11.0
+pip uninstall -y torch torchvision
+pip install --no-cache-dir --only-binary=:all: "torch==2.4.0" "torchvision==0.19.0" --index-url https://download.pytorch.org/whl/cpu
+python -c "import torch; x=torch.randn(2,2); print(x @ x)"  # must NOT Illegal instruction
+
+# 6. Terminal 3 (W2) — ACT with HF_TOKEN for faster download (replace hf_... with your token from huggingface.co/settings/tokens):
+docker compose exec -e HF_TOKEN=hf_YOUR_TOKEN_HERE arm bash
+# ^ must include arm bash after -e (your earlier error: requires at least 2 arg(s))
+source /opt/ros/jazzy/setup.bash && source /workspace/install/setup.bash && source /opt/venv/bin/activate
+export HF_HUB_ENABLE_HF_TRANSFER=1  # 2-3x faster if hf_transfer installed (pip show hf_transfer)
+python -m robot_arm_hardware.lerobot_infer --ros-args -p hf_repo:=shreeshinator/arm-pick-blocks-act-first -p enable_robot:=true -p fps:=15 -p n_action_steps:=50
+# Log: homing complete — policy running → then ros2 topic hz /joint_command 15Hz (was waiting for /front_cam + /joint_states, now publishing)
+# First run downloads ~400MB to /home/arduino/docker hf-cache (17G), next runs instant
+```
+
+**Update without rebuild:** `git pull` new fix → Codespaces `docker buildx build --platform linux/arm64 -t shreeshinator/nexusarm:unoq --push` → Uno Q `docker pull shreeshinator/nexusarm:unoq && docker tag ... && docker compose up -d --force-recreate --no-build` → re-do Step 5 pip downgrades if new image still has torch 2.11.
 
 ## Uno Q + Docker (edge brain) — BEGINNER REFERENCE (Docker preinstalled!)
 
@@ -335,24 +395,32 @@ docker compose exec arm bash  # then source ... && ros2 launch real_bringup...
 * `Cannot open /dev/ttyACM0` → `sudo usermod -aG dialout $USER` + re-login, or `SERIAL_PORT=/dev/ttyUSB0 docker compose up` if Uno shows as USB0.
 * `camera topics empty` → phone/ESP32 must be same WiFi as Uno Q; verify URL in browser before `FRONT_URL`.
 * `Gripper crosses over` → travel 0.015 m matches finger collision `y±0.019`; don't increase `upper` without matching `GRIPPER_MAX_TRAVEL`.
-* `Failed <<< robot_arm_description Could not create symlink ... Alt_Govde.stl` → You had dangling symlinks (`120000`) to `/home/shreeshinator/Robotic+Arm...` outside repo. Fixed in `890645f` by vendoring real `100644` 3.0M STLs — `git pull` on Codespaces/Uno Q and rebuild. Verify: `find src/robot_arm_description/meshes -type l | wc -l` must be `0`.
-* `No space left` (16 GB eMMC, root now 10GB with 7-8GB used → only 2GB free — **you hit this**) → **Slim alone is NOT enough even with option C** (even a pre-built image must live in `/var/lib/docker` on root). You **MUST** move Docker storage to `/home` (where 10GB is free) — 2 minutes, one-time, no data loss. Your "no partition" worked only with 16GB free; with 10GB/8GB used you have no choice:
+* `Failed <<< robot_arm_description Could not create symlink ... Alt_Govde.stl` → You had dangling symlinks (`120000`) to `/home/shreeshinator/Robotic+Arm...` outside repo. Fixed in `890645f` by vendoring real `100644` 3.0M STLs — `git pull` on Codespaces/Uno Q. Verify: `find src/robot_arm_description/meshes -type l | wc -l` must be `0`.
+* `No space left` (16 GB eMMC, root 9.8G 239M free 98% — **you hit this**) → **Must be `/home/arduino/docker` (17G), NOT `/home/docker` (239M):** `df -h` shows `/` 9.8G + `/home/arduino` 18G separate — `/home` itself is on root. **Wrong `daemon.json=/home/docker` still on root → `docker pull 3GB → no space` even after fix:**
   ```bash
-  # On Uno Q via VS Code / adb shell — DO THIS ONCE BEFORE any build OR load:
-  df -h  # see root 10G 80% and /home with space
-  docker builder prune -f; docker image prune -f  # SAFE clean, keeps App Lab bricks
+  # On Uno Q via VS Code / adb shell — DO THIS ONCE:
+  df -h  # / 9.8G 98% 239M, /home/arduino 18G 4% 17G free
+  docker builder prune -f; docker image prune -f  # SAFE, keeps App Lab
   # NEVER docker system prune -a --volumes -f  (wipes ghcr.io/arduino/app-bricks/*)
-
-  # Move Docker to /home (permanent fix):
   sudo systemctl stop docker.socket; sudo systemctl stop docker
-  sudo mkdir -p /home/docker
-  # Tell Docker to use /home/docker from now on:
-  echo '{"data-root":"/home/docker"}' | sudo tee /etc/docker/daemon.json
-  sudo rsync -a /var/lib/docker/ /home/docker/  # copy existing images/bricks to new place (1-2 min)
-  sudo systemctl start docker; df -h  # root should drop to ~60%, Docker now on /home
+  sudo mkdir -p /home/arduino/docker
+  echo '{"data-root":"/home/arduino/docker"}' | sudo tee /etc/docker/daemon.json
+  sudo rsync -a /var/lib/docker/ /home/arduino/docker/  # or /home/docker → /home/arduino/docker if already moved
+  sudo rm -rf /var/lib/docker; sudo rm -rf /home/docker  # free root
+  sudo systemctl start docker; df -h  # / ~60%, Docker Root Dir: /home/arduino/docker
+  docker info 2>/dev/null | grep "Docker Root Dir"  # must be /home/arduino/docker
   ```
-  Then: `cd ~/NexusArm && docker compose build --no-cache` — slim (`ros:jazzy-ros-base`, no `ros-dev-tools`) now fits AND stays on `/home`. For **Option C (build on laptop)** you still need this move first, then `docker load` will also land on `/home`.
-* `Deleted app-bricks/python-apps-base` after prune `-a --volumes` → **Recovery (run now):** `docker pull ghcr.io/arduino/app-bricks/python-apps-base:0.12.0` (re-downloads ~300MB, SHA `35eb218...`), or open Arduino App Lab → it auto-repulls missing bricks on next App start. Verify: `docker images | grep app-bricks`. Do NOT prune with `-a --volumes` again.
+* `Error: No such image: nexusarm-arm:latest` after `docker pull shreeshinator/nexusarm:unoq 7.15GB` → Compose expects `nexusarm-arm:latest` but you pulled `shreeshinator/nexusarm:unoq`: `docker tag shreeshinator/nexusarm:unoq nexusarm-arm:latest && docker compose up -d --no-build`
+* `Failed to populate field: MoveTo_Request has no attribute 'x:0.27'` → Missing space after colon: use `"{x: 0.27, y: 0.0, z: 0.08, pitch: -1.57, gripper: 0.0, duration_sec: 1.5}"` (space after `:`), not `"{x:0.27}"`
+* `bash: .venv/bin/python: No such file` inside Docker `root@...:/workspace#` → Venv inside Docker is `/opt/venv` (`Dockerfile:24`), not `.venv` (host only). Use `python -m ...` or `/opt/venv/bin/python -m ...` after `source /opt/venv/bin/activate` (`which python → /opt/venv/bin/python`)
+* `ImportError: 'av' is required` / `av 18.1.0 False` → `Dockerfile` installed `lerobot 0.6.1` without `av`: `pip install --only-binary=av "av==14.2.0"` (14.2.0/12.3.0 have `av.option`, 18.1.0 False on aarch64). Also `pip install --only-binary=av` needs no source build — if `Getting requirements to build wheel ... libavdevice not found` then `av` wheel missing → use `--only-binary=av`
+* `AttributeError: module 'av' has no attribute 'option'` at `pyav_utils.py:73` → Same `av` version mismatch (`av 18.1.0 False`), downgrade to `av==14.2.0` as above. Type hint `av.option.Option` only
+* `Package libavdevice was not found ... REQUIRED ffmpeg 7` when `pip install av` → `ros:jazzy-ros-base` has `ffmpeg 6` (`libav 59`), `av` source needs `ffmpeg 7` + `libav*dev`; use `--only-binary=av` wheel (no dev needed) or `apt install ffmpeg libavcodec-dev ...` then `pip install av==14.2.0`
+* `requires at least 2 arg(s), only received 0` on `docker compose exec -e HF_TOKEN=...` → Forgot `arm bash`: `docker compose exec -e HF_TOKEN=hf_... arm bash` (needs `SERVICE COMMAND`)
+* `Illegal instruction (core dumped)` after `homing complete — policy running` → `torch 2.11` `aarch64` wheel compiled `armv8.2-a+dotprod` but `QRB2210 4×A53` is `armv8-a` without `dotprod` → `SDOT` illegal. Downgrade live (no rebuild): `pip uninstall -y torch torchvision && pip install --only-binary=:all: "torch==2.4.0" "torchvision==0.19.0" --index-url https://download.pytorch.org/whl/cpu` (baseline, no dotprod) → `python -c "import torch; x=torch.randn(2,2); print(x@x)"` must not crash. Keep `av==14.2.0` + `HF_TOKEN` + `fps 15`
+* `still waiting for /modular_arm/move_to ...` then `homing ... waiting 2.0s` forever → W0 `real_bringup` not running or `serial_port` wrong — `ros2 topic list | grep modular_arm` must show `/modular_arm/move_to`
+* `policy timer started ... waiting for /front_cam/... + /joint_states` but not publishing `/joint_command` → Camera or joint_state `0Hz`: `ros2 topic hz /front_cam/image_raw/compressed` and `ros2 topic echo /joint_states --once` in W1 must be `>0Hz` while W0 `real_bringup fps:=15.0` running
+* `Deleted app-bricks/python-apps-base` after prune `-a --volumes` → **Recovery:** `docker pull ghcr.io/arduino/app-bricks/python-apps-base:0.12.0`, verify `docker images | grep app-bricks`. Do NOT `prune -a --volumes` again.
 * `VS Code freezes on Uno Q (2 GB)` → disable Copilot/Roo on remote host (known RAM issue).
 
 Credits: mechanical design by **Emre Kalem (@emrekalem)** — MakerWorld Standard Digital File License.
