@@ -5,17 +5,20 @@ FROM ros:jazzy
 SHELL ["/bin/bash", "-c"]
 ENV DEBIAN_FRONTEND=noninteractive
 
-# System deps + ROS control/Camera bridge deps
+# System deps + ROS control/Camera bridge deps — verified names for ros:jazzy (Ubuntu 24.04 noble)
+# python3-colcon-common-extensions is the correct apt name (not colcon-common-extensions)
+# ros-dev-tools exists as meta, keep; v4l2loopback-dkms is optional (no kernel headers on arm64) — try but don't fail build
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-venv python3-pip python3-serial python3-pytest \
-    colcon-common-extensions ros-dev-tools \
+    python3-colcon-common-extensions ros-dev-tools \
     ros-jazzy-xacro ros-jazzy-robot-state-publisher \
     ros-jazzy-joint-state-publisher-gui ros-jazzy-rviz2 \
     ros-jazzy-ros-gz-sim ros-jazzy-ros-gz-bridge \
     ros-jazzy-gz-ros2-control ros-jazzy-controller-manager \
     ros-jazzy-joint-trajectory-controller ros-jazzy-joint-state-broadcaster \
     ros-jazzy-foxglove-bridge ros-jazzy-cv-bridge \
-    v4l2loopback-dkms curl git \
+    curl git \
+ && (apt-get install -y --no-install-recommends v4l2loopback-dkms || echo "v4l2loopback skip — no headers") \
  && rm -rf /var/lib/apt/lists/*
 
 # Venv with ROS visibility — mirrors repo .venv (AGENTS.md §LeRobot)
