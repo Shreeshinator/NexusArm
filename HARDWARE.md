@@ -137,7 +137,7 @@ dmesg | tail; ls -l /dev/ttyACM0  # heartbeat LED blinks 500 ms if alive
 If fails: unplug/replug Uno R3, `groups` must contain `dialout` (re-login after `sudo usermod -aG dialout $USER`), or flash from laptop via Arduino IDE instead (same sketch, same port).
 
 ### Step 5 — Build & start Docker lunchbox (Uno Q side) — IN DETAIL
-**What happens here:** `docker compose build` reads `Dockerfile` and downloads `ros:jazzy` (~2 GB, multi-arch x86_64/arm64 so it works on laptop *and* Uno Q aarch64, first time 5-10 min slower on 2 GB Uno Q — shows pulling layers). It creates a venv `/opt/venv` pinned `lerobot==0.6.1 numpy==1.26.4 setuptools==79.*` + CPU `torch`, copies `src/`, runs `colcon build --symlink-install`. `docker compose up -d` then **creates the running container** `arm-stack` from that image (you see `Creating arm-stack ... done`), mounts `src/` live + `hf-cache`, binds `/dev/ttyACM0` + `host` network, and runs `sleep infinity` — i.e. **it sits idle, no ROS auto-started** (you asked for manual). `docker compose ps` proves it's `Up`.
+**What happens here:** `docker compose build` reads **slim** `Dockerfile` (`ros:jazzy-ros-base`, not full desktop) and downloads ~1 GB multi-arch x86_64/arm64 (works on laptop *and* Uno Q aarch64, first time 5-10 min slower on 2 GB Uno Q — shows pulling layers). It creates a venv `/opt/venv` pinned `lerobot==0.6.1` (auto pulls `numpy 2.1.x` + `opencv 5.0` aarch64, **not** pinned `1.26.4`) + `setuptools==79.*` + CPU `torch`, copies `src/`, runs `colcon build --symlink-install`. `docker compose up -d` then **creates the running container** `arm-stack` from that image (you see `Creating arm-stack ... done`), mounts `src/` live + `hf-cache`, binds `/dev/ttyACM0` + `host` network, and runs `sleep infinity` — i.e. **it sits idle, no ROS auto-started** (you asked for manual). `docker compose ps` proves it's `Up`.
 
 ```bash
 cd ~/NexusArm
@@ -252,7 +252,7 @@ Without tmux, you can also open **multiple SSH sessions** and each runs its own 
 What `docker-compose.yml` does (in plain English) — now **SLIM, fits 16 GB**:
 * `FROM ros:jazzy-ros-base` → slim ROS base (not full desktop `ros:jazzy` which pulls RViz/Qt/Gazebo = your No space error). Sim runs on laptop natively, **Uno Q never needs Gazebo**.
 * `apt` → ONLY real-arm: `xacro`, `robot-state-publisher`, `controller_manager`, `joint-trajectory-controller`, `joint-state-broadcaster`, `ros2-control`, `cv-bridge`, `colcon` — **no `ros-dev-tools` (that alone dragged mercurial+subversion+bloom+PyQt5+OpenCV 260 MB), no `rviz2`/`gz-sim`/`foxglove`**.
-* `venv /opt/venv` → `lerobot==0.6.1 numpy==1.26.4 setuptools==79.*` + CPU `torch` (no CUDA). `colcon build --symlink-install`.
+* `venv /opt/venv` → `lerobot==0.6.1` (auto `numpy 2.1.x` + `opencv 5.0`) + `setuptools==79.*` + CPU `torch` (no CUDA). `colcon build --symlink-install`.
 * `devices: /dev/ttyACM0` + `network_mode: host` + `volumes: ./src:ro` + `hf-cache` — same as before.
 * `command: sleep infinity` → manual as you requested.
 * **Plain `docker` equivalent:** `docker build -t nexusarm . && docker run -it --net host --device /dev/ttyACM0 -v ./src:/workspace/src nexusarm bash`.
@@ -273,23 +273,16 @@ source /opt/ros/jazzy/setup.bash && source /workspace/install/setup.bash && sour
 * `Cannot open /dev/ttyACM0` → `sudo usermod -aG dialout $USER` + re-login, or `SERIAL_PORT=/dev/ttyUSB0 docker compose up` if Uno shows as USB0.
 * `camera topics empty` → phone/ESP32 must be same WiFi as Uno Q; verify URL in browser before `FRONT_URL`.
 * `Gripper crosses over` → travel 0.015 m matches finger collision `y±0.019`; don't increase `upper` without matching `GRIPPER_MAX_TRAVEL`.
-* `No space left` (16 GB eMMC, `/var/lib/docker/overlay2` ~4 GB — **you hit this**) → Slim Dockerfile now fixes *future* builds, but you must **free + move** current overlay first — **NEVER `docker system prune -a --volumes -f` on Uno Q** (deletes App Lab bricks like `python-apps-base:0.12.0` you just saw):
+* `No space left` (16 GB eMMC, `/var/lib/docker/overlay2` ~4 GB — **you hit this**) → Slim Dockerfile (`ros:jazzy-ros-base`, no `ros-dev-tools`) now fixes *future* builds. **No partition move needed** (per your request). Just SAFE clean before rebuilding — **NEVER `docker system prune -a --volumes -f`** (deletes `python-apps-base:0.12.0` you just saw):
   ```bash
   # On Uno Q via VS Code / adb shell — BEFORE rebuilding — SAFE clean (keeps App Lab):
   df -h; du -sh /var/lib/docker  # confirm full
   docker builder prune -f                    # only build cache, safe
   docker image prune -f                      # only dangling images, safe
-  # NOT: docker system prune -a --volumes -f  (that wipes ghcr.io/arduino/app-bricks/*)
-
-  # If still >70% full or 16GB model, move overlay to /home (has 10GB free) — one-time, perfect fix [p-koellner 2026-07-07]:
-  sudo systemctl stop docker.socket; sudo systemctl stop docker
-  sudo mkdir -p /home/var/lib && sudo rsync -a /var/lib/docker /home/var/lib/
-  sudo rm -rf /var/lib/docker && sudo mkdir -p /var/lib/docker
-  echo "/home/var/lib/docker /var/lib/docker none bind 0 0" | sudo tee -a /etc/fstab
-  sudo systemctl daemon-reload && sudo mount /var/lib/docker && sudo systemctl start docker
-  df -h  # root should drop 2-3GB
+  docker system prune -f                     # safe prune (no -a --volumes)
+  # NOT: docker system prune -a --volumes -f  (wipes ghcr.io/arduino/app-bricks/*)
   ```
-  Then: `cd ~/NexusArm && docker compose build --no-cache` — slim base `ros:jazzy-ros-base` + minimal apt now fits.
+  Then: `cd ~/NexusArm && docker compose build --no-cache` — slim now fits.
 * `Deleted app-bricks/python-apps-base` after prune `-a --volumes` → **Recovery (run now):** `docker pull ghcr.io/arduino/app-bricks/python-apps-base:0.12.0` (re-downloads ~300MB, SHA `35eb218...`), or open Arduino App Lab → it auto-repulls missing bricks on next App start. Verify: `docker images | grep app-bricks`. Do NOT prune with `-a --volumes` again.
 * `VS Code freezes on Uno Q (2 GB)` → disable Copilot/Roo on remote host (known RAM issue).
 

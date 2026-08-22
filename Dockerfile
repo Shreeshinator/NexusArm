@@ -27,8 +27,10 @@ ENV PATH=/opt/venv/bin:$PATH
 
 # Pin setuptools BEFORE lerobot (AGENTS.md:88 — 81 breaks colcon)
 RUN /opt/venv/bin/pip install --no-cache-dir "setuptools==79.*"
+# lerobot 0.6.1 requires numpy>=2.0,<2.3 (your log: Cannot install lerobot==0.6.1 and numpy==1.26.4)
+# Let lerobot pull numpy 2.1.x + opencv 5.0 aarch64 (manylinux_2_28_aarch64) — DO NOT pin 1.26.4
 RUN /opt/venv/bin/pip install --no-cache-dir \
-    "lerobot==0.6.1" "numpy==1.26.4" "opencv-python-headless" \
+    "lerobot==0.6.1" "opencv-python-headless" \
     h5py datasets
 # CPU torch by default (Uno Q / dev laptop without CUDA); override at compose if needed
 RUN /opt/venv/bin/pip install --no-cache-dir \
