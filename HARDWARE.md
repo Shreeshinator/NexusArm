@@ -249,13 +249,13 @@ ros2 topic hz /front_cam/image_raw/compressed
 
 Without tmux, you can also open **multiple SSH sessions** and each runs its own `docker compose exec arm bash` — same effect, just more connections.
 
-What `docker-compose.yml` does (in plain English):
-* `FROM ros:jazzy` → starts from the official ROS lunchbox (works on both your laptop x86_64 and Uno Q aarch64).
-* `venv /opt/venv` → Python box inside the lunchbox pinned `lerobot==0.6.1 numpy==1.26.4 setuptools==79.*` + CPU `torch` (no CUDA needed). `colcon build --symlink-install` builds ROS packages.
-* `devices: /dev/ttyACM0` → plugs the Uno R3 USB serial into the box so `hw_interface` can talk to it. `network_mode: host` → box shares Uno Q's WiFi so phone camera URL + HuggingFace work.
-* `volumes: ./src:/workspace/src:ro` + `hf-cache` → your `src/` stays editable live; model caches persist after reboot.
-* `command: sleep infinity` → box stays open with nothing auto-started; you type `ros2 launch ...` yourself (you asked for manual control). If you wanted auto, you'd put `real_bringup.launch.py` there.
-* **Plain `docker` equivalent** (same as `compose` above): `docker build -t nexusarm . && docker run -it --net host --device /dev/ttyACM0 -v ./src:/workspace/src nexusarm bash` — longer to type, same effect.
+What `docker-compose.yml` does (in plain English) — now **SLIM, fits 16 GB**:
+* `FROM ros:jazzy-ros-base` → slim ROS base (not full desktop `ros:jazzy` which pulls RViz/Qt/Gazebo = your No space error). Sim runs on laptop natively, **Uno Q never needs Gazebo**.
+* `apt` → ONLY real-arm: `xacro`, `robot-state-publisher`, `controller_manager`, `joint-trajectory-controller`, `joint-state-broadcaster`, `ros2-control`, `cv-bridge`, `colcon` — **no `ros-dev-tools` (that alone dragged mercurial+subversion+bloom+PyQt5+OpenCV 260 MB), no `rviz2`/`gz-sim`/`foxglove`**.
+* `venv /opt/venv` → `lerobot==0.6.1 numpy==1.26.4 setuptools==79.*` + CPU `torch` (no CUDA). `colcon build --symlink-install`.
+* `devices: /dev/ttyACM0` + `network_mode: host` + `volumes: ./src:ro` + `hf-cache` — same as before.
+* `command: sleep infinity` → manual as you requested.
+* **Plain `docker` equivalent:** `docker build -t nexusarm . && docker run -it --net host --device /dev/ttyACM0 -v ./src:/workspace/src nexusarm bash`.
 
 ### Inference on the edge
 
@@ -273,7 +273,20 @@ source /opt/ros/jazzy/setup.bash && source /workspace/install/setup.bash && sour
 * `Cannot open /dev/ttyACM0` → `sudo usermod -aG dialout $USER` + re-login, or `SERIAL_PORT=/dev/ttyUSB0 docker compose up` if Uno shows as USB0.
 * `camera topics empty` → phone/ESP32 must be same WiFi as Uno Q; verify URL in browser before `FRONT_URL`.
 * `Gripper crosses over` → travel 0.015 m matches finger collision `y±0.019`; don't increase `upper` without matching `GRIPPER_MAX_TRAVEL`.
-* `No space left` (16 GB eMMC, `/var/lib/docker/overlay2` ~4 GB) → App Lab docker fills root. Check: `df -h; du -sh /var/lib/docker`. Careful: `docker system prune -f` deletes App Lab containers — stop apps first. Long-term fix: move docker to /home per [Arduino Forum p-koellner 2026-07-07](https://forum.arduino.cc/t/uno-q-disk-space/1424766): `sudo systemctl stop docker`, `rsync -a /var/lib/docker /home/var/lib`, `rm -rf /var/lib/docker`, bind-mount via `/etc/fstab`.
+* `No space left` (16 GB eMMC, `/var/lib/docker/overlay2` ~4 GB — **you hit this**) → Slim Dockerfile now fixes *future* builds, but you must **free + move** current overlay first:
+  ```bash
+  # On Uno Q via VS Code / adb shell — BEFORE rebuilding:
+  df -h; du -sh /var/lib/docker  # confirm full
+  docker system prune -a --volumes -f  # WARNING: removes App Lab containers — stop App Lab apps first via App Lab UI
+  # If still >70% full or 16GB model, move overlay to /home (has 10GB free) — one-time, perfect fix [p-koellner 2026-07-07]:
+  sudo systemctl stop docker.socket; sudo systemctl stop docker
+  sudo mkdir -p /home/var/lib && sudo rsync -a /var/lib/docker /home/var/lib/
+  sudo rm -rf /var/lib/docker && sudo mkdir -p /var/lib/docker
+  echo "/home/var/lib/docker /var/lib/docker none bind 0 0" | sudo tee -a /etc/fstab
+  sudo systemctl daemon-reload && sudo mount /var/lib/docker && sudo systemctl start docker
+  df -h  # root should drop 2-3GB
+  ```
+  Then: `cd ~/NexusArm && docker compose build --no-cache` — slim base `ros:jazzy-ros-base` + minimal apt now fits.
 * `VS Code freezes on Uno Q (2 GB)` → disable Copilot/Roo on remote host (known RAM issue).
 
 Credits: mechanical design by **Emre Kalem (@emrekalem)** — MakerWorld Standard Digital File License.

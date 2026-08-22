@@ -1,27 +1,26 @@
-# Uno Q / host container — ROS 2 Jazzy + Gazebo Harmonic + LeRobot
-# Runs on x86_64 (dev) and aarch64 (Uno Q) — ros:jazzy is multi-arch.
-FROM ros:jazzy
+# Uno Q / host container — ROS 2 Jazzy + LeRobot (SLIM for 16GB eMMC)
+# Slimmed for Uno Q Debian overlay: ros:jazzy-ros-base (not full ros:jazzy desktop = +2GB GUI+Qt)
+# Runs on x86_64 (dev) and aarch64 (Uno Q) — multi-arch. Simulation (Gazebo/RViz) is NOT included here — run sim on laptop/WSL natively.
+FROM ros:jazzy-ros-base
 
 SHELL ["/bin/bash", "-c"]
 ENV DEBIAN_FRONTEND=noninteractive
 
-# System deps + ROS control/Camera bridge deps — verified names for ros:jazzy (Ubuntu 24.04 noble)
-# python3-colcon-common-extensions is the correct apt name (not colcon-common-extensions)
-# ros-dev-tools exists as meta, keep; v4l2loopback-dkms is optional (no kernel headers on arm64) — try but don't fail build
+# Minimal apt: ONLY real-arm needs. Each extra ros-jazzy-* drags 100s MB + fills /var/lib/docker/overlay2 on 16GB eMMC.
+# - ros-dev-tools alone pulls mercurial+subversion+bloom+PyQt5+opencv (your 260MB failure) — DO NOT install on Uno Q.
+# - rivz2 / joint-state-publisher-gui / ros-gz-sim / gz-ros2-control / foxglove are SIM/GUI — not needed for hw_interface + camera_bridge.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3-venv python3-pip python3-serial python3-pytest \
-    python3-colcon-common-extensions ros-dev-tools \
+    python3-venv python3-pip python3-serial \
+    python3-colcon-common-extensions \
     ros-jazzy-xacro ros-jazzy-robot-state-publisher \
-    ros-jazzy-joint-state-publisher-gui ros-jazzy-rviz2 \
-    ros-jazzy-ros-gz-sim ros-jazzy-ros-gz-bridge \
-    ros-jazzy-gz-ros2-control ros-jazzy-controller-manager \
-    ros-jazzy-joint-trajectory-controller ros-jazzy-joint-state-broadcaster \
-    ros-jazzy-foxglove-bridge ros-jazzy-cv-bridge \
+    ros-jazzy-controller-manager ros-jazzy-joint-trajectory-controller ros-jazzy-joint-state-broadcaster \
+    ros-jazzy-ros2-control ros-jazzy-ros2-controllers \
+    ros-jazzy-cv-bridge \
     curl git \
- && (apt-get install -y --no-install-recommends v4l2loopback-dkms || echo "v4l2loopback skip — no headers") \
- && rm -rf /var/lib/apt/lists/*
+ && rm -rf /var/lib/apt/lists/* \
+ && apt-get clean
 
-# Venv with ROS visibility — mirrors repo .venv (AGENTS.md §LeRobot)
+# Venv with ROS visibility — mirrors repo .venv (AGENTS.md §LeRobot), keep pip cache off to save overlay
 RUN python3 -m venv --system-site-packages /opt/venv
 ENV VIRTUAL_ENV=/opt/venv
 ENV PATH=/opt/venv/bin:$PATH
