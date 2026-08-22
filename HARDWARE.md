@@ -273,11 +273,14 @@ source /opt/ros/jazzy/setup.bash && source /workspace/install/setup.bash && sour
 * `Cannot open /dev/ttyACM0` → `sudo usermod -aG dialout $USER` + re-login, or `SERIAL_PORT=/dev/ttyUSB0 docker compose up` if Uno shows as USB0.
 * `camera topics empty` → phone/ESP32 must be same WiFi as Uno Q; verify URL in browser before `FRONT_URL`.
 * `Gripper crosses over` → travel 0.015 m matches finger collision `y±0.019`; don't increase `upper` without matching `GRIPPER_MAX_TRAVEL`.
-* `No space left` (16 GB eMMC, `/var/lib/docker/overlay2` ~4 GB — **you hit this**) → Slim Dockerfile now fixes *future* builds, but you must **free + move** current overlay first:
+* `No space left` (16 GB eMMC, `/var/lib/docker/overlay2` ~4 GB — **you hit this**) → Slim Dockerfile now fixes *future* builds, but you must **free + move** current overlay first — **NEVER `docker system prune -a --volumes -f` on Uno Q** (deletes App Lab bricks like `python-apps-base:0.12.0` you just saw):
   ```bash
-  # On Uno Q via VS Code / adb shell — BEFORE rebuilding:
+  # On Uno Q via VS Code / adb shell — BEFORE rebuilding — SAFE clean (keeps App Lab):
   df -h; du -sh /var/lib/docker  # confirm full
-  docker system prune -a --volumes -f  # WARNING: removes App Lab containers — stop App Lab apps first via App Lab UI
+  docker builder prune -f                    # only build cache, safe
+  docker image prune -f                      # only dangling images, safe
+  # NOT: docker system prune -a --volumes -f  (that wipes ghcr.io/arduino/app-bricks/*)
+
   # If still >70% full or 16GB model, move overlay to /home (has 10GB free) — one-time, perfect fix [p-koellner 2026-07-07]:
   sudo systemctl stop docker.socket; sudo systemctl stop docker
   sudo mkdir -p /home/var/lib && sudo rsync -a /var/lib/docker /home/var/lib/
@@ -287,6 +290,7 @@ source /opt/ros/jazzy/setup.bash && source /workspace/install/setup.bash && sour
   df -h  # root should drop 2-3GB
   ```
   Then: `cd ~/NexusArm && docker compose build --no-cache` — slim base `ros:jazzy-ros-base` + minimal apt now fits.
+* `Deleted app-bricks/python-apps-base` after prune `-a --volumes` → **Recovery (run now):** `docker pull ghcr.io/arduino/app-bricks/python-apps-base:0.12.0` (re-downloads ~300MB, SHA `35eb218...`), or open Arduino App Lab → it auto-repulls missing bricks on next App start. Verify: `docker images | grep app-bricks`. Do NOT prune with `-a --volumes` again.
 * `VS Code freezes on Uno Q (2 GB)` → disable Copilot/Roo on remote host (known RAM issue).
 
 Credits: mechanical design by **Emre Kalem (@emrekalem)** — MakerWorld Standard Digital File License.
