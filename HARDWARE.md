@@ -281,6 +281,52 @@ source /opt/ros/jazzy/setup.bash && source /workspace/install/setup.bash && sour
 .venv/bin/python -m robot_arm_hardware.lerobot_infer --ros-args -p hf_repo:=your/policy -p enable_robot:=true -p n_action_steps:=50
 ```
 
+## OPTION C — Build on GitHub Codespaces → Docker Hub → Pull on Uno Q (1 day, no laptop stress)
+
+**Why Codespaces:** Your Uno Q root is 98% (9.8G 239M free) and laptop `buildx` is slow. Codespaces is a cloud Ubuntu VM (32GB disk, `buildx` preinstalled, Docker-in-Docker) — do the heavy `docker build` there, push to your **Docker Hub** account, then Uno Q just `docker pull` (lands on `/home/docker` 17GB free).
+
+**You already fixed meshes (`890645f` real 3.0M STLs) — Codespaces build will now pass `Failed <<< robot_arm_description`.**
+
+**Steps (copy-paste):**
+
+**1. Push vendored meshes (done: `890645f` → `NexusArm/main` ✅).** Now create Codespace:
+* GitHub.com → `Shreeshinator/NexusArm` → `Code` → `Codespaces` → `Create codespace on main` (or `working`). Wait 60s, terminal `vscode →` means you are on Codespaces (`uname -m` = `x86_64`).
+
+**2. Codespaces — Build `arm64` for Uno Q + push to Docker Hub:**
+```bash
+# In Codespace terminal:
+git pull
+docker --version; docker buildx version  # already there
+docker buildx create --use --name nexusarm 2>/dev/null || docker buildx use nexusarm
+docker buildx inspect --bootstrap  # 30s
+
+# Login to YOUR Docker Hub (one-time): Docker Hub → Account Settings → Security → New Access Token → copy
+echo $DOCKERHUB_PAT | docker login -u YOUR_DOCKERHUB_USER --password-stdin
+# Or: docker login -u YOUR_USER  # then paste PAT when asked for password
+
+# Cross-build for Uno Q (aarch64) even though Codespace is x86_64, and push:
+docker buildx build --platform linux/arm64 -t YOUR_USER/nexusarm:unoq -f Dockerfile . --push
+# 5-10 min first time (ros:jazzy-ros-base ~750MB + pip lerobot/torch ~1GB + colcon). --push pushes manifest directly, no 2GB scp.
+# For both laptop + Uno Q: --platform linux/amd64,linux/arm64 -t YOUR_USER/nexusarm:latest --push
+docker buildx imagetools inspect YOUR_USER/nexusarm:unoq  # verify arm64
+```
+
+**3. Uno Q (`arduino@shreeshuno`, already `daemon.json=/home/docker` ✅ `Docker Root Dir: /home/docker`):**
+```bash
+# VS Code SSH to Uno Q:
+docker login -u YOUR_USER  # same PAT
+docker pull YOUR_USER/nexusarm:unoq  # pulls into /home/docker (17GB), NOT root 239M
+cd ~/NexusArm && git pull  # sync vendored meshes
+# In docker-compose.yml ensure:  arm:  image: YOUR_USER/nexusarm:unoq  (keep command: sleep infinity)
+docker compose up -d && docker compose ps  # arm-stack Up
+docker compose exec arm bash  # then source ... && ros2 launch real_bringup...
+```
+*Why `/home/arduino/nexusarm-unoq.tar.gz` not needed now:* `scp` to `/home/arduino` was a staging file → `docker load` → `/home/docker`. With Codespaces + Docker Hub you skip the 2GB file entirely — `docker pull` writes straight to `/home/docker`.
+
+**Update cadence:** `git pull` new `Dockerfile` → Codespaces `buildx build --push` → Uno Q `docker pull YOUR_USER/nexusarm:unoq && docker compose up -d --force-recreate`.
+
+---
+
 ## Troubleshooting
 
 * `ssh: Could not resolve unoq.local` → mDNS blocked by firewall/guest WiFi — use IP `ssh arduino@192.168.1.x`; check `avahi-daemon` running: `sudo systemctl status avahi-daemon`. App Lab must have done onboarding (enables Network Mode).
@@ -289,6 +335,7 @@ source /opt/ros/jazzy/setup.bash && source /workspace/install/setup.bash && sour
 * `Cannot open /dev/ttyACM0` → `sudo usermod -aG dialout $USER` + re-login, or `SERIAL_PORT=/dev/ttyUSB0 docker compose up` if Uno shows as USB0.
 * `camera topics empty` → phone/ESP32 must be same WiFi as Uno Q; verify URL in browser before `FRONT_URL`.
 * `Gripper crosses over` → travel 0.015 m matches finger collision `y±0.019`; don't increase `upper` without matching `GRIPPER_MAX_TRAVEL`.
+* `Failed <<< robot_arm_description Could not create symlink ... Alt_Govde.stl` → You had dangling symlinks (`120000`) to `/home/shreeshinator/Robotic+Arm...` outside repo. Fixed in `890645f` by vendoring real `100644` 3.0M STLs — `git pull` on Codespaces/Uno Q and rebuild. Verify: `find src/robot_arm_description/meshes -type l | wc -l` must be `0`.
 * `No space left` (16 GB eMMC, root now 10GB with 7-8GB used → only 2GB free — **you hit this**) → **Slim alone is NOT enough even with option C** (even a pre-built image must live in `/var/lib/docker` on root). You **MUST** move Docker storage to `/home` (where 10GB is free) — 2 minutes, one-time, no data loss. Your "no partition" worked only with 16GB free; with 10GB/8GB used you have no choice:
   ```bash
   # On Uno Q via VS Code / adb shell — DO THIS ONCE BEFORE any build OR load:
