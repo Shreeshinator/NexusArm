@@ -1,13 +1,18 @@
 # Uno Q stack — bind Uno R3 serial into container, share host network for DroidCam/HF.
 # Container does NOT auto-start ROS — you run commands yourself inside (see HARDWARE.md).
-# Usage:
-#   docker compose up -d --build       # start container in background (no ROS yet)
+# Usage (fast — pull prebuilt, no build on 4GB Uno Q):
+#   docker pull shreeshinator/nexusarm:unoq
+#   docker tag shreeshinator/nexusarm:unoq nexusarm-arm:latest  # compose expects this name (or set image below)
+#   docker compose up -d --no-build   # start container in background (no ROS yet)
 #   docker compose exec arm bash       # open shell inside, then run ros2 launch ... yourself
+# Usage (build locally — first time only, needs 17G /home/arduino/docker):
+#   docker compose up -d --build
 # On Uno Q the device is almost always /dev/ttyACM0 (Uno R3). Override with env:
 #   SERIAL_PORT=/dev/ttyUSB0 docker compose up -d
 
 services:
   arm:
+    image: shreeshinator/nexusarm:unoq
     build: .
     container_name: arm-stack
     network_mode: host          # DroidCam phone IP + HuggingFace reachable, DDS host-local

@@ -155,17 +155,23 @@ docker info 2>/dev/null | grep "Docker Root Dir"  # must be /home/arduino/docker
 ```
 > No resizing or wipe is required. One `echo` line tells Docker to store on `/home/arduino`. Reversible: `sudo rm /etc/docker/daemon.json && sudo systemctl restart docker` to undo. **Critical: `/home/docker` is still on root (239M) — must be `/home/arduino/docker` (17G).**
 
-**What happens next:** `docker compose build` reads **slim** `Dockerfile` (`ros:jazzy-ros-base`, not full desktop) and downloads ~1 GB multi-arch (first time 5-10 min slower on 2GB RAM Uno Q). It creates venv `lerobot==0.6.1` (auto `numpy 2.1.x` + `opencv 5.0`, NOT `1.26.4` bug) + `setuptools 79` + CPU `torch`, copies `src/`, runs `colcon build`. `docker compose up -d` creates `arm-stack` (`Creating arm-stack ... done`), mounts `src/` + `/dev/ttyACM0` + `host` network, runs `sleep infinity` — idle, no ROS auto-started. `docker compose ps` proves `Up`.
+**What happens next — two paths (pull is fast, build is fallback):**
+* **Fast (recommended on 4GB Uno Q):** `docker pull shreeshinator/nexusarm:unoq` (7.15GB, multi-arch `arm64`, lands on `/home/arduino/docker` 17G — no build). `docker compose up -d --no-build` then creates `arm-stack` (`Creating arm-stack ... done`), mounts `src/` + `/dev/ttyACM0` + `host` network, runs `sleep infinity` — idle, no ROS auto-started. `docker compose ps` proves `Up`.
+* **Build (fallback or after Dockerfile changes):** `docker compose build` reads **slim** `Dockerfile` (`ros:jazzy-ros-base`, not full desktop) and downloads ~1 GB (first time 5-10 min slower on 2GB RAM Uno Q). It creates venv `lerobot==0.6.1` (auto `numpy 2.1.x` + `opencv 5.0`, NOT `1.26.4` bug) + `setuptools 79` + CPU `torch`, copies `src/`, runs `colcon build`. Then `docker compose up -d` same as above.
 
 ```bash
 cd ~/NexusArm
-docker compose build          # now fits on /home (was No space before)
-docker compose up -d          # sleep infinity, NO auto ROS
-docker compose ps             # should show arm-stack Up X seconds
-docker logs arm-stack         # empty (we slept)
+# Fast path (no build on Uno Q):
+docker pull shreeshinator/nexusarm:unoq
+docker compose up -d --no-build   # sleep infinity, NO auto ROS — now uses image: shreeshinator/nexusarm:unoq
+# — or — build path (after Step 5 fix, needs 17G):
+docker compose build              # now fits on /home (was No space before)
+docker compose up -d              # sleep infinity, NO auto ROS
+docker compose ps                 # should show arm-stack Up X seconds
+docker logs arm-stack             # empty (we slept)
 ```
 
-**Option C — Build on Laptop then load (avoids building on small Uno Q):** To avoid building on the Uno Q, apply the FIX above first (still required for storage), then on **laptop/WSL** run `docker build -t nexusarm . && docker save nexusarm | gzip > nexusarm.tar.gz`, `scp nexusarm.tar.gz arduino@unoq.local:/home/arduino/`, then on Uno Q `docker load < nexusarm.tar.gz && docker compose up -d` — also lands on `/home`.
+**Option C — Build on Laptop then load (avoids building on small Uno Q):** To avoid building on the Uno Q entirely, apply the FIX above first (still required for storage), then on **laptop/WSL** run `docker build -t nexusarm . && docker save nexusarm | gzip > nexusarm.tar.gz`, `scp nexusarm.tar.gz arduino@unoq.local:/home/arduino/`, then on Uno Q `docker load < nexusarm.tar.gz && docker tag nexusarm shreeshinator/nexusarm:unoq && docker compose up -d --no-build` — also lands on `/home`.
 
 **Now — run ROS yourself. You need 2-3 terminals. With VS Code SSH this is EASY — no tmux required:**
 
@@ -197,15 +203,18 @@ docker compose exec arm bash
 source /opt/ros/jazzy/setup.bash && source /workspace/install/setup.bash && source /opt/venv/bin/activate
 ros2 topic list | grep -E "joint|front_cam"   # /joint_states, /front_cam/image_raw/compressed
 ros2 topic hz /front_cam/image_raw/compressed  # ~10-15 Hz if phone URL correct
-ros2 service call /modular_arm/move_to modular_arm_interfaces/srv/MoveTo "{x:0.27,y:0,z:0.08,pitch:-1.57,gripper:0,duration_sec:1.5}"
-# Arm should home. Try gripper:1.0 to close, x:0.25 to move. See docs/07_CAMERA_BRIDGE.md.
+ros2 service call /modular_arm/move_to modular_arm_interfaces/srv/MoveTo "{x: 0.27, y: 0.0, z: 0.08, pitch: -1.57, gripper: 0.0, duration_sec: 1.5}"
+# Arm should home. Try gripper: 1.0 to close, x: 0.25 to move. See docs/07_CAMERA_BRIDGE.md.
 ```
 
 **Terminal 3 (W2) — Extra tasks (each gets its own terminal):**
 ```bash
-docker compose exec arm bash; source ...; ros2 run robot_arm_hardware keyboard_teleop
-# or .venv/bin/python lerobot-ros2-recorder.py --repo-id your/dataset --fps 15 --cams front_cam
-# or .venv/bin/python -m robot_arm_hardware.lerobot_infer --ros-args -p hf_repo:=your/policy -p enable_robot:=true -p n_action_steps:=50
+docker compose exec arm bash
+source /opt/ros/jazzy/setup.bash && source /workspace/install/setup.bash && source /opt/venv/bin/activate
+ros2 run robot_arm_hardware keyboard_teleop
+# or: python -m robot_arm_hardware.lerobot_infer --ros-args -p hf_repo:=shreeshinator/arm-pick-blocks-act-first -p enable_robot:=true -p n_action_steps:=50
+# or: python lerobot-ros2-recorder.py --repo-id your/dataset --fps 15 --cams front_cam
+# venv is /opt/venv inside Docker — use python -m, not .venv/bin/python (host only)
 ```
 Phone `FRONT_URL` must be same WiFi — test `http://<PHONE_IP>:4747/video` in laptop browser first.
 
@@ -233,10 +242,12 @@ docker info 2>/dev/null | grep "Docker Root Dir"  # /home/arduino/docker
 docker images | grep nexusarm  # shreeshinator/nexusarm:unoq 7.15GB
 find src/robot_arm_description/meshes -type l | wc -l  # 0 (real STLS vendored)
 
-# 1. Fix image name mismatch (image is shreeshinator/nexusarm:unoq, compose expects nexusarm-arm:latest):
-docker tag shreeshinator/nexusarm:unoq nexusarm-arm:latest
+# 1. Ensure container up (pull path — now compose has image: shreeshinator/nexusarm:unoq):
+docker pull shreeshinator/nexusarm:unoq   # if not already pulled (7.15GB, 17G partition)
 docker compose up -d --no-build
 docker compose ps  # arm-stack Up (sleep infinity)
+# Legacy alias (only if your compose still expects nexusarm-arm:latest):
+# docker tag shreeshinator/nexusarm:unoq nexusarm-arm:latest && docker compose up -d --no-build
 
 # 2. VS Code SSH + = 3 terminals. In EVERY terminal:
 docker compose exec arm bash
@@ -304,9 +315,10 @@ Uno Q is the SBC that **hosts the same ROS stack in Docker**; the Uno R3 stays t
 
 ```bash
 # On Uno Q via SSH (e.g. ssh unoq@<uno-q-ip>)
-# 1. Build + start container (no ROS auto-started — sleep infinity)
-docker compose build
-docker compose up -d
+# 1. Pull prebuilt (fast) or build, then start container (no ROS auto-started — sleep infinity)
+docker pull shreeshinator/nexusarm:unoq && docker compose up -d --no-build   # fast — no build on 4GB board
+# — or — docker compose build && docker compose up -d   # fallback if you changed Dockerfile
+docker compose ps  # arm-stack Up
 
 # 2. Start tmux (one SSH session, many windows)
 tmux new -s arm   # if not installed: sudo apt install tmux
@@ -322,13 +334,15 @@ ros2 launch robot_arm_hardware real_bringup.launch.py \
 # Ctrl-B C, then:
 docker compose exec arm bash
 source /opt/ros/jazzy/setup.bash && source /workspace/install/setup.bash && source /opt/venv/bin/activate
-.venv/bin/python -m robot_arm_hardware.lerobot_infer --ros-args -p hf_repo:=your/policy -p enable_robot:=true
+python -m robot_arm_hardware.lerobot_infer --ros-args -p hf_repo:=shreeshinator/arm-pick-blocks-act-first -p enable_robot:=true
 # or: ros2 run robot_arm_hardware keyboard_teleop
-# or: .venv/bin/python lerobot-ros2-recorder.py --repo-id your/dataset --fps 15 ...
+# or: python lerobot-ros2-recorder.py --repo-id your/dataset --fps 15 ...
+# venv is /opt/venv inside Docker — use python -m, not .venv/bin/python (host only)
 
 # Pane 2: quick checks
 docker compose exec arm bash
-ros2 service call /modular_arm/move_to modular_arm_interfaces/srv/MoveTo "{x:0.27,y:0,z:0.08,pitch:-1.57,gripper:0,duration_sec:1.5}"
+source /opt/ros/jazzy/setup.bash && source /workspace/install/setup.bash && source /opt/venv/bin/activate
+ros2 service call /modular_arm/move_to modular_arm_interfaces/srv/MoveTo "{x: 0.27, y: 0.0, z: 0.08, pitch: -1.57, gripper: 0.0, duration_sec: 1.5}"
 ros2 topic hz /front_cam/image_raw/compressed
 ```
 
@@ -349,7 +363,8 @@ What `docker-compose.yml` does (in plain English) — now **SLIM, fits 16 GB**:
 Same as `docs/06_INFERENCE.md` / `08_TRAINING.md`, but from inside the container via `docker compose exec arm bash`:
 ```bash
 source /opt/ros/jazzy/setup.bash && source /workspace/install/setup.bash && source /opt/venv/bin/activate
-.venv/bin/python -m robot_arm_hardware.lerobot_infer --ros-args -p hf_repo:=your/policy -p enable_robot:=true -p n_action_steps:=50
+python -m robot_arm_hardware.lerobot_infer --ros-args -p hf_repo:=shreeshinator/arm-pick-blocks-act-first -p enable_robot:=true -p n_action_steps:=50
+# venv is /opt/venv inside Docker — use python -m, not .venv/bin/python (host only)
 ```
 
 ## OPTION C — Build on GitHub Codespaces → Docker Hub → Pull on Uno Q (1 day, no laptop stress)

@@ -101,7 +101,13 @@ ros2 launch robot_arm_hardware real_arm.launch.py serial_port:=/dev/ttyACM0 baud
 ros2 launch robot_arm_hardware real_hw.launch.py serial_port:=/dev/ttyACM0
 ```
 
-Uno Q users: `FRONT_URL=http://<phone-ip>:4747/video docker compose up --build` runs `real_bringup.launch.py` inside the container — see `HARDWARE.md`.
+Uno Q users (all-on-Uno-Q): container is `sleep infinity` — it does **not** auto-start ROS. After `docker compose up` (see `HARDWARE.md` for the full Uno Q guide), enter the container and launch yourself:
+```bash
+docker compose exec arm bash
+source /opt/ros/jazzy/setup.bash && source /workspace/install/setup.bash && source /opt/venv/bin/activate
+ros2 launch robot_arm_hardware real_bringup.launch.py serial_port:=/dev/ttyACM0 front_url:=http://<phone-ip>:4747/video fps:=15.0
+```
+Full step-by-step including `daemon.json`, `docker pull`, `docker tag`, and inference: see [`HARDWARE.md`](../HARDWARE.md) (FULL COMMAND LIST).
 
 What you’ll see:
 

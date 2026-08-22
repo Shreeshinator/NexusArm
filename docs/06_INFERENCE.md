@@ -120,7 +120,7 @@ ros2 topic pub --once /lerobot_infer/command std_msgs/String "{data: home}"     
 * **QoS:** both sides `BEST_EFFORT depth=1 KEEP_LAST` — no drops.
 * **Device:** auto `cuda` if available else `cpu`.
 
-Have fun — the bowl should start filling up! When you're ready for the edge, the Uno Q Docker port lives in `UNO_Q_PORT_PLAN.md`.
+Have fun — the bowl should start filling up! For the Uno Q (all-on-Uno-Q via Docker `shreeshinator/nexusarm:unoq`), see [`HARDWARE.md`](../HARDWARE.md) — same `real_bringup.launch.py` inside `docker compose exec arm bash` with `/opt/venv`.
 
 ## Credits
 
