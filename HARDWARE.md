@@ -1,5 +1,7 @@
 # Hardware — Native + Uno Q (Docker) Bringup
 
+> ✅ **Verified 2026-08-22 — FULL BRINGUP TESTED on Uno Q QRB2210 4GB `aarch64`, QC Debian 13, `shreeshinator/nexusarm:unoq 7.15GB`, `lerobot 0.6.1 + av 14.2.0 + torch 2.7.0/torchvision 0.22.0 + OPENBLAS_CORETYPE=ARMV8`, `fps 15`, `HF_TOKEN` HF_TRANSFER**
+
 Full wiring + flash + bringup for the **real arm**. Native Ubuntu is the default; **Uno Q** adds the Docker container as the “edge brain” (same Uno R3 firmware).
 
 > For mechanical build + perfboard details see `docs/03_HARDWARE.md` + pin table in `sketch/servo_bridge/README.md`. This file is the one-command bringup + Uno Q port guide.
