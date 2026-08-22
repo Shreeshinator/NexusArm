@@ -299,117 +299,46 @@ python -m robot_arm_hardware.lerobot_infer --ros-args -p hf_repo:=shreeshinator/
 
 **Update without rebuild:** `git pull` new fix → Codespaces `docker buildx build --platform linux/arm64 -t shreeshinator/nexusarm:unoq --push` → Uno Q `docker pull shreeshinator/nexusarm:unoq && docker tag ... && docker compose up -d --force-recreate --no-build` → re-do Step 5 pip downgrades if new image still has torch 2.11.
 
-## Uno Q + Docker (edge brain) — BEGINNER REFERENCE (Docker preinstalled!)
+## Uno Q + Docker — Concepts (one-minute explainer)
 
-### What is Docker? What is `docker compose`?
-*Think of Docker like a lunchbox.* **Docker** packs your whole computer setup (Ubuntu, ROS Jazzy, Python packages) into one box (called an **image**) so it runs the same everywhere — your laptop or the tiny Uno Q board. You don't install ROS by hand on the Uno Q; you just run the lunchbox.
-* **Plain `docker`** = you type one long command every time: `docker run --device /dev/ttyACM0 --net host -v ./src:/workspace/src ros:jazzy bash` — you have to remember every flag.
-* **`docker compose`** = you write those flags *once* in a file (`docker-compose.yml`) and just type `docker compose up`. It's the same `docker` underneath, just with a recipe so you don't retype 5 lines each time. That's why we use `compose` — shorter, less error-prone, same result. You *could* use plain `docker run` with the same flags from `docker-compose.yml:7-45` and it would do the same thing; `compose` is just convenient.
-* `Dockerfile` = recipe to *build* the lunchbox. `docker-compose.yml` = recipe to *run* it (which devices, network, folders to share).
+*Think of Docker like a lunchbox.* **Docker** packs Ubuntu + ROS Jazzy + Python into one **image** so it runs identically on laptop and Uno Q. `Dockerfile` = recipe to *build* the lunchbox. `docker-compose.yml` = recipe to *run* it (devices, network, folders). `docker compose` is just shorthand for `docker run --device /dev/ttyACM0 --net host -v ./src:/workspace/src ...` — same result, fewer typos.
 
-Uno Q is the SBC that **hosts the same ROS stack in Docker**; the Uno R3 stays the servo bridge over `/dev/ttyACM0` bound into the container (`servo_bridge.ino:26-28`).
+- Uno Q = edge brain (QRB2210) that **hosts the ROS stack in Docker**; Uno R3 stays the servo bridge on `/dev/ttyACM0` (`servo_bridge.ino:26-28`).
+- Container is `sleep infinity` — you `docker compose exec arm bash` then `source ... && ros2 launch ...` yourself. **Canonical 3-terminal flow + FULL COMMAND LIST above is the single source of truth — do not use a second copy.**
+- Inside Docker, venv is `/opt/venv` (not host `.venv`) — use `python -m ...` after `source /opt/venv/bin/activate` (`which python → /opt/venv/bin/python`).
+- Slim image: `FROM ros:jazzy-ros-base` (not full `ros:jazzy`), no `rviz2`/`gz-sim`/`foxglove`/`ros-dev-tools`; only `xacro` + `robot-state-publisher` + `controller_manager` + `joint-trajectory-controller` + `joint-state-broadcaster` + `ros2-control` + `cv-bridge` + `colcon`; `lerobot==0.6.1` → `numpy 2.1.x` + `opencv 5.0` + `setuptools==79.*` + CPU `torch`.
+- For plain `ssh` without VS Code, use `tmux new -s arm` (`Ctrl-B C` new window, `Ctrl-B N/P` switch, `Ctrl-B D` detach, `tmux attach -t arm` reattach).
 
-### Build + run (container stays idle — you run commands yourself)
+### Inference on Uno Q
 
-**On Uno Q with VS Code SSH multiple terminals are available (Terminal `+` button) — `tmux` is optional legacy for plain `ssh`:**
+Same as `docs/06_INFERENCE.md`, but inside `docker compose exec arm bash` with `/opt/venv` — see FULL COMMAND LIST Step 6 (includes `HF_TOKEN` + `OPENBLAS_CORETYPE=ARMV8` + `fps:=15` + `n_action_steps:=50`).
 
+## OPTION C — Codespaces → Docker Hub → Pull on Uno Q (no laptop build)
+
+**Why:** Uno Q root is 98% (9.8G/239M) and `buildx` is slow. Codespaces = cloud VM with `buildx` + Docker-in-Docker (32 GB). Build there, push to Docker Hub, then Uno Q `docker pull` lands straight on `/home/arduino/docker` (17G) — no 2GB `scp`/`docker load`.
+
+**1. Push vendored meshes (done: `890645f` → `NexusArm/main`).** GitHub → `Shreeshinator/NexusArm` → `Code` → `Codespaces` → `Create codespace on main` (wait 60s, `uname -m` is `x86_64`).
+
+**2. Codespaces — cross-build `arm64` + push:**
 ```bash
-# On Uno Q via SSH (e.g. ssh unoq@<uno-q-ip>)
-# 1. Pull prebuilt (fast) or build, then start container (no ROS auto-started — sleep infinity)
-docker pull shreeshinator/nexusarm:unoq && docker compose up -d --no-build   # fast — no build on 4GB board
-# — or — docker compose build && docker compose up -d   # fallback if you changed Dockerfile
-docker compose ps  # arm-stack Up
-
-# 2. Start tmux (one SSH session, many windows)
-tmux new -s arm   # if not installed: sudo apt install tmux
-
-# Inside tmux — Pane 0: arm + cameras
-docker compose exec arm bash
-source /opt/ros/jazzy/setup.bash && source /workspace/install/setup.bash && source /opt/venv/bin/activate
-ros2 launch robot_arm_hardware real_bringup.launch.py \
-  serial_port:=/dev/ttyACM0 front_url:=http://<phone-ip>:4747/video fps:=15.0
-# Ctrl-B then C = new window, Ctrl-B then N/P = switch windows
-
-# Pane 1: inference / teleop / recorder (new tmux window)
-# Ctrl-B C, then:
-docker compose exec arm bash
-source /opt/ros/jazzy/setup.bash && source /workspace/install/setup.bash && source /opt/venv/bin/activate
-python -m robot_arm_hardware.lerobot_infer --ros-args -p hf_repo:=shreeshinator/arm-pick-blocks-act-first -p enable_robot:=true
-# or: ros2 run robot_arm_hardware keyboard_teleop
-# or: python lerobot-ros2-recorder.py --repo-id your/dataset --fps 15 ...
-# venv is /opt/venv inside Docker — use python -m, not .venv/bin/python (host only)
-
-# Pane 2: quick checks
-docker compose exec arm bash
-source /opt/ros/jazzy/setup.bash && source /workspace/install/setup.bash && source /opt/venv/bin/activate
-ros2 service call /modular_arm/move_to modular_arm_interfaces/srv/MoveTo "{x: 0.27, y: 0.0, z: 0.08, pitch: -1.57, gripper: 0.0, duration_sec: 1.5}"
-ros2 topic hz /front_cam/image_raw/compressed
-```
-
-**tmux cheatsheet (inside SSH):** `Ctrl-B C` new window, `Ctrl-B N` next, `Ctrl-B P` prev, `Ctrl-B D` detach (keeps running), `tmux attach -t arm` reattach after disconnect.
-
-Without tmux, you can also open **multiple SSH sessions** and each runs its own `docker compose exec arm bash` — same effect, just more connections.
-
-What `docker-compose.yml` does (in plain English) — now **SLIM, fits 16 GB**:
-* `FROM ros:jazzy-ros-base` → slim ROS base (not full desktop `ros:jazzy` which pulls RViz/Qt/Gazebo = your No space error). Sim runs on laptop natively, **Uno Q never needs Gazebo**.
-* `apt` → ONLY real-arm: `xacro`, `robot-state-publisher`, `controller_manager`, `joint-trajectory-controller`, `joint-state-broadcaster`, `ros2-control`, `cv-bridge`, `colcon` — **no `ros-dev-tools` (that alone dragged mercurial+subversion+bloom+PyQt5+OpenCV 260 MB), no `rviz2`/`gz-sim`/`foxglove`**.
-* `venv /opt/venv` → `lerobot==0.6.1` (auto `numpy 2.1.x` + `opencv 5.0`) + `setuptools==79.*` + CPU `torch` (no CUDA). `colcon build --symlink-install`.
-* `devices: /dev/ttyACM0` + `network_mode: host` + `volumes: ./src:ro` + `hf-cache` — same as before.
-* `command: sleep infinity` → manual as you requested.
-* **Plain `docker` equivalent:** `docker build -t nexusarm . && docker run -it --net host --device /dev/ttyACM0 -v ./src:/workspace/src nexusarm bash`.
-
-### Inference on the edge
-
-Same as `docs/06_INFERENCE.md` / `08_TRAINING.md`, but from inside the container via `docker compose exec arm bash`:
-```bash
-source /opt/ros/jazzy/setup.bash && source /workspace/install/setup.bash && source /opt/venv/bin/activate
-python -m robot_arm_hardware.lerobot_infer --ros-args -p hf_repo:=shreeshinator/arm-pick-blocks-act-first -p enable_robot:=true -p n_action_steps:=50
-# venv is /opt/venv inside Docker — use python -m, not .venv/bin/python (host only)
-```
-
-## OPTION C — Build on GitHub Codespaces → Docker Hub → Pull on Uno Q (1 day, no laptop stress)
-
-**Why Codespaces:** Your Uno Q root is 98% (9.8G 239M free) and laptop `buildx` is slow. Codespaces is a cloud Ubuntu VM (32GB disk, `buildx` preinstalled, Docker-in-Docker) — do the heavy `docker build` there, push to your **Docker Hub** account, then Uno Q just `docker pull` (lands on `/home/docker` 17GB free).
-
-**With vendored meshes (`890645f` real 3.0M STLs), the Codespaces build passes `Failed <<< robot_arm_description`.**
-
-**Steps (copy-paste):**
-
-**1. Push vendored meshes (done: `890645f` → `NexusArm/main` ✅).** Now create Codespace:
-* GitHub.com → `Shreeshinator/NexusArm` → `Code` → `Codespaces` → `Create codespace on main` (or `working`). Wait 60s, terminal `vscode →` means you are on Codespaces (`uname -m` = `x86_64`).
-
-**2. Codespaces — Build `arm64` for Uno Q + push to Docker Hub:**
-```bash
-# In Codespace terminal:
 git pull
-docker --version; docker buildx version  # already there
 docker buildx create --use --name nexusarm 2>/dev/null || docker buildx use nexusarm
-docker buildx inspect --bootstrap  # 30s
-
-# Login to YOUR Docker Hub (one-time): Docker Hub → Account Settings → Security → New Access Token → copy
+docker buildx inspect --bootstrap
 echo $DOCKERHUB_PAT | docker login -u YOUR_DOCKERHUB_USER --password-stdin
-# Or: docker login -u YOUR_USER  # then paste PAT when asked for password
-
-# Cross-build for Uno Q (aarch64) even though Codespace is x86_64, and push:
-docker buildx build --platform linux/arm64 -t YOUR_USER/nexusarm:unoq -f Dockerfile . --push
-# 5-10 min first time (ros:jazzy-ros-base ~750MB + pip lerobot/torch ~1GB + colcon). --push pushes manifest directly, no 2GB scp.
-# For both laptop + Uno Q: --platform linux/amd64,linux/arm64 -t YOUR_USER/nexusarm:latest --push
-docker buildx imagetools inspect YOUR_USER/nexusarm:unoq  # verify arm64
+docker buildx build --platform linux/arm64 -t shreeshinator/nexusarm:unoq -f Dockerfile . --push
+# ~5-10 min (ros:jazzy-ros-base + lerobot/torch + colcon). For multi-arch: --platform linux/amd64,linux/arm64
+docker buildx imagetools inspect shreeshinator/nexusarm:unoq  # verify arm64
 ```
 
-**3. Uno Q (`arduino@shreeshuno`, already `daemon.json=/home/docker` ✅ `Docker Root Dir: /home/docker`):**
+**3. Uno Q (already `daemon.json=/home/arduino/docker` → `Docker Root Dir: /home/arduino/docker`):**
 ```bash
-# VS Code SSH to Uno Q:
-docker login -u YOUR_USER  # same PAT
-docker pull YOUR_USER/nexusarm:unoq  # pulls into /home/docker (17GB), NOT root 239M
-cd ~/NexusArm && git pull  # sync vendored meshes
-# In docker-compose.yml ensure:  arm:  image: YOUR_USER/nexusarm:unoq  (keep command: sleep infinity)
-docker compose up -d && docker compose ps  # arm-stack Up
+cd ~/NexusArm && git pull
+docker pull shreeshinator/nexusarm:unoq   # into /home/arduino/docker (17G), not root
+docker compose up -d --no-build && docker compose ps  # arm-stack Up (sleep infinity)
 docker compose exec arm bash  # then source ... && ros2 launch real_bringup...
 ```
-*Why `/home/arduino/nexusarm-unoq.tar.gz` not needed now:* `scp` to `/home/arduino` was a staging file → `docker load` → `/home/docker`. With Codespaces + Docker Hub you skip the 2GB file entirely — `docker pull` writes straight to `/home/docker`.
 
-**Update cadence:** `git pull` new `Dockerfile` → Codespaces `buildx build --push` → Uno Q `docker pull YOUR_USER/nexusarm:unoq && docker compose up -d --force-recreate`.
+**Update cadence:** `git pull` changed `Dockerfile` → Codespaces `buildx build --push` → Uno Q `docker pull shreeshinator/nexusarm:unoq && docker compose up -d --force-recreate --no-build`.
 
 ---
 

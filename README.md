@@ -58,17 +58,20 @@ ros2 service call /modular_arm/move_to modular_arm_interfaces/srv/MoveTo \
 ## Quick start — real hardware
 
 ```bash
-# 1. Flash sketch/servo_bridge/servo_bridge.ino to Uno R3 (115200 baud)
+# 1. Flash sketch/servo_bridge/servo_bridge.ino to Uno R3 (115200 baud, see HARDWARE.md)
 # 2. Wire servos + 6V supply + shared GND, connect /dev/ttyACM0
-ros2 launch robot_arm_hardware real_arm.launch.py serial_port:=/dev/ttyACM0 baud_rate:=115200
+# Native (one-command arm + cameras):
+ros2 launch robot_arm_hardware real_bringup.launch.py \
+  serial_port:=/dev/ttyACM0 front_url:=http://<phone-ip>:4747/video fps:=15.0
 
 # Same MoveTo API:
 ros2 service call /modular_arm/move_to modular_arm_interfaces/srv/MoveTo \
   "{x: 0.27, y: 0.0, z: 0.08, pitch: -1.57, elbow: '', gripper: 0.0, duration_sec: 2.0}"
 
-# Uno Q (Docker):
-docker pull shreeshinator/nexusarm:unoq
-# See HARDWARE.md for full bringup + inference (HF model, fps 15)
+# Uno Q — all in Docker (same launch, inside container):
+# See HARDWARE.md FULL COMMAND LIST (Steps 0–6): daemon.json → /home/arduino/docker (17G),
+# docker pull shreeshinator/nexusarm:unoq && docker compose up -d --no-build,
+# then docker compose exec arm bash → source ... → same ros2 launch real_bringup...
 ```
 
 Full sim details: [docs/sim_setup/](docs/sim_setup/) · Hardware: [HARDWARE.md](HARDWARE.md) · Setup: [SETUP.md](SETUP.md) · Agent notes: [AGENTS.md](AGENTS.md)
