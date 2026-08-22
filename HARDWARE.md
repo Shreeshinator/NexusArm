@@ -60,7 +60,13 @@ Verify: `ros2 topic echo /joint_states --once`, `ros2 topic hz /front_cam/image_
 
 ---
 
-## Uno Q + Docker (edge brain)
+## Uno Q + Docker (edge brain) — BEGINNER GUIDE
+
+### What is Docker? What is `docker compose`?
+*Think of Docker like a lunchbox.* **Docker** packs your whole computer setup (Ubuntu, ROS Jazzy, Python packages) into one box (called an **image**) so it runs the same everywhere — your laptop or the tiny Uno Q board. You don't install ROS by hand on the Uno Q; you just run the lunchbox.
+* **Plain `docker`** = you type one long command every time: `docker run --device /dev/ttyACM0 --net host -v ./src:/workspace/src ros:jazzy bash` — you have to remember every flag.
+* **`docker compose`** = you write those flags *once* in a file (`docker-compose.yml`) and just type `docker compose up`. It's the same `docker` underneath, just with a recipe so you don't retype 5 lines each time. That's why we use `compose` — shorter, less error-prone, same result. You *could* use plain `docker run` with the same flags from `docker-compose.yml:7-45` and it would do the same thing; `compose` is just convenient.
+* `Dockerfile` = recipe to *build* the lunchbox. `docker-compose.yml` = recipe to *run* it (which devices, network, folders to share).
 
 Uno Q is the SBC that **hosts the same ROS stack in Docker**; the Uno R3 stays the servo bridge over `/dev/ttyACM0` bound into the container (`servo_bridge.ino:26-28`).
 
@@ -102,10 +108,13 @@ ros2 topic hz /front_cam/image_raw/compressed
 
 Without tmux, you can also open **multiple SSH sessions** and each runs its own `docker compose exec arm bash` — same effect, just more connections.
 
-What `docker-compose.yml` does:
-* `FROM ros:jazzy` (aarch64 + x86_64), venv `/opt/venv --system-site-packages` pinned `lerobot==0.6.1 numpy==1.26.4 opencv-python-headless h5py setuptools==79.* CPU torch`, `colcon build --symlink-install`.
-* `devices: /dev/ttyACM0`, `network_mode: host` (DroidCam + HF), mounts `src/` live + `hf-cache`/`lerobot-cache` volumes.
-* `command: sleep infinity` — container stays alive for manual `ros2 launch` / `ros2 run`.
+What `docker-compose.yml` does (in plain English):
+* `FROM ros:jazzy` → starts from the official ROS lunchbox (works on both your laptop x86_64 and Uno Q aarch64).
+* `venv /opt/venv` → Python box inside the lunchbox pinned `lerobot==0.6.1 numpy==1.26.4 setuptools==79.*` + CPU `torch` (no CUDA needed). `colcon build --symlink-install` builds ROS packages.
+* `devices: /dev/ttyACM0` → plugs the Uno R3 USB serial into the box so `hw_interface` can talk to it. `network_mode: host` → box shares Uno Q's WiFi so phone camera URL + HuggingFace work.
+* `volumes: ./src:/workspace/src:ro` + `hf-cache` → your `src/` stays editable live; model caches persist after reboot.
+* `command: sleep infinity` → box stays open with nothing auto-started; you type `ros2 launch ...` yourself (you asked for manual control). If you wanted auto, you'd put `real_bringup.launch.py` there.
+* **Plain `docker` equivalent** (same as `compose` above): `docker build -t nexusarm . && docker run -it --net host --device /dev/ttyACM0 -v ./src:/workspace/src nexusarm bash` — longer to type, same effect.
 
 ### Inference on the edge
 
