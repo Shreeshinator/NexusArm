@@ -69,7 +69,7 @@ ROS2 **Jazzy** + **Gazebo Harmonic** colcon workspace for a 4-DOF printed arm (C
 
 ## LeRobot data collection
 - Recorder script: `lerobot-ros2-recorder.py` at repo root (extracted from `lerobot-ros2-recorder.md`).
-- **venv (with ROS visibility):** the repo-root `.venv` (uv, `include-system-site-packages=true`). Run recorder with `/home/shreeshinator/AI_Challenge_Robotic_Arm/.venv/bin/python`. Contains `lerobot 0.6.1 + datasets + h5py` with **host `.venv` pins `numpy==1.26.4` (must stay <2 — cv2 4.13.0 headless is NumPy 1.x ABI; NumPy 2.2.6 crashes the recorder)** vs **Docker `/opt/venv` uses `numpy==2.1.x` (required by `lerobot 0.6.1` — `Dockerfile:32` lets lerobot pull `2.1`, do NOT pin `1.26.4` there, see `HARDWARE.md:222` FULL COMMAND LIST). Only `opencv-python-headless` is installed (duplicate `opencv-python` removed).
+- **venv (with ROS visibility):** the repo-root `.venv` (uv, `include-system-site-packages=true`). Run recorder with `~/NexusArm/.venv/bin/python`. Contains `lerobot 0.6.1 + datasets + h5py` with **host `.venv` pins `numpy==1.26.4` (must stay <2 — cv2 4.13.0 headless is NumPy 1.x ABI; NumPy 2.2.6 crashes the recorder)** vs **Docker `/opt/venv` uses `numpy==2.1.x` (required by `lerobot 0.6.1` — `Dockerfile:32` lets lerobot pull `2.1`, do NOT pin `1.26.4` there, see `HARDWARE.md:222` FULL COMMAND LIST). Only `opencv-python-headless` is installed (duplicate `opencv-python` removed).
 - Our camera topics are `/wrist_camera/image_raw` + `/cam_front/image_raw` (guide assumes `/gripper_cam` + `/front_cam` — rename when invoking).
 - `keyboard_teleop` (`ros2 run robot_arm_hardware keyboard_teleop`) drives the arm via `/modular_arm/move_to`.  Controls in the SAME terminal:
     w/a/s/d   X/Y coarse    i/j/k/l  X/Y fine

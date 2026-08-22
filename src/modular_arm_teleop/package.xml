@@ -5,7 +5,7 @@
   <version>0.1.0</version>
   <description>Teleoperation node: reads Arduino leader arm over serial and commands the simulated arm.</description>
   <maintainer email="user@example.com">user</maintainer>
-  <license>MIT</license>
+  <license>Apache-2.0</license>
 
   <exec_depend>rclpy</exec_depend>
   <exec_depend>control_msgs</exec_depend>

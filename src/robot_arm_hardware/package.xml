@@ -5,7 +5,7 @@
   <version>0.1.0</version>
   <description>Real-robot hardware interface: bridges /joint_command to an Arduino Uno R3 over serial and republishes /joint_states.</description>
   <maintainer email="user@example.com">user</maintainer>
-  <license>MIT</license>
+  <license>Apache-2.0</license>
 
   <exec_depend>rclpy</exec_depend>
   <exec_depend>std_msgs</exec_depend>
