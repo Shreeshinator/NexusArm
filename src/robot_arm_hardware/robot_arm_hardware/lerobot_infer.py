@@ -113,7 +113,7 @@ class LerobotInfer(Node):
         self.declare_parameter("home_duration", 2.0)
         self.declare_parameter("home_delay", 0.5)  # extra settle after trajectory
         # bug 1 fix: executing 100 steps (10 s) is too stale at 10 Hz; override here
-        self.declare_parameter("n_action_steps", 10)  # how many chunk steps to replay before re-querying vision; 10 = 1 s horizon
+        self.declare_parameter("n_action_steps", 50)  # how many chunk steps to replay before re-querying vision; 50 = 3.33 s @15Hz (verified pick→place sweet spot; 100=6.6s too stale, 10 too twitchy)
         self.declare_parameter("temporal_ensemble_coeff", -1.0)  # <0 = disabled, >=0 enables temporal ensembling
 
         self.hf_repo = self.get_parameter("hf_repo").get_parameter_value().string_value
@@ -216,8 +216,8 @@ class LerobotInfer(Node):
         cfg.device = self.device
         # --- fix 2: limit how many predicted steps we replay before looking at camera again
         # Trained cfg has chunk_size=100 / n_action_steps=100 → at 15 Hz that's 6.6 s of blind replay
-        # (gripper stays up, never goes low). Override to a short horizon for reactive control.
-        # 10 = 0.66 s at 15 Hz; set to 1 for fully reactive (every tick re-queries vision).
+        # (gripper stays up, never goes low). Override to a shorter horizon for reactive control.
+        # Default 50 = 3.33 s at 15 Hz (verified pick→place sweet spot); 10 = 0.66 s; 1 = fully reactive.
         if self.n_action_steps_param > 0:
             orig = cfg.n_action_steps
             cfg.n_action_steps = min(int(self.n_action_steps_param), int(cfg.chunk_size))

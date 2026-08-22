@@ -1,0 +1,45 @@
+# Uno Q one-command stack — bind Uno R3 serial into container, share host network for DroidCam/HF.
+# Usage:
+#   docker compose up --build          # native dev — edit src/ locally, --symlink-install picks it up
+#   SERIAL_PORT=/dev/ttyUSB0 FRONT_URL=http://192.168.1.10:4747/video docker compose up
+# On Uno Q the device is almost always /dev/ttyACM0 (Uno R3). Override with env.
+
+services:
+  arm:
+    build: .
+    container_name: arm-stack
+    network_mode: host          # DroidCam phone IP + HuggingFace reachable, DDS host-local
+    privileged: false
+    devices:
+      - "${SERIAL_PORT:-/dev/ttyACM0}:${SERIAL_PORT:-/dev/ttyACM0}"
+    volumes:
+      # Mount src live for iteration (colcon --symlink-install) — comment out for frozen image
+      - ./src:/workspace/src:ro
+      # Persist datasets / HF cache / checkpoints across restarts
+      - hf-cache:/root/.cache/huggingface
+      - lerobot-cache:/root/.cache/huggingface/lerobot
+    environment:
+      - SERIAL_PORT=${SERIAL_PORT:-/dev/ttyACM0}
+      - BAUD_RATE=${BAUD_RATE:-115200}
+      - FRONT_URL=${FRONT_URL:-}
+      - GRIPPER_URL=${GRIPPER_URL:-}
+      - FPS=${FPS:-15.0}
+      - ENABLE_ROBOT=${ENABLE_ROBOT:-false}
+    command: >
+      bash -c '
+        source /opt/ros/jazzy/setup.bash &&
+        source /workspace/install/setup.bash &&
+        source /opt/venv/bin/activate &&
+        ros2 launch robot_arm_hardware real_bringup.launch.py
+          serial_port:="$${SERIAL_PORT}"
+          baud_rate:="$${BAUD_RATE}"
+          front_url:="$${FRONT_URL}"
+          gripper_url:="$${GRIPPER_URL}"
+          fps:="$${FPS}"
+      '
+    # Keep container alive even if ROS exits — `docker compose logs -f` to tail
+    restart: unless-stopped
+
+volumes:
+  hf-cache:
+  lerobot-cache:

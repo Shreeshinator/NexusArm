@@ -1,4 +1,13 @@
-# Modular_arm — 4-DOF ROS2 arm (Jazzy + Gazebo Harmonic)
+# Setup — Redirect
+
+> **This file moved.** Full setup is now at [`docs/01_SETUP.md`](docs/01_SETUP.md) and the sim quickstart at [`docs/sim_setup/README.md`](docs/sim_setup/README.md).
+> This stub stays so old links don't break.
+
+See `docs/01_SETUP.md` for the maintained version. Content below is archived from the previous SETUP.md for reference.
+
+---
+
+# Modular_arm — 4-DOF ROS2 arm (Jazzy + Gazebo Harmonic) — ARCHIVED
 
 ## 1. Arm design
 

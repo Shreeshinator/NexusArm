@@ -7,24 +7,16 @@ Moves the arm in Cartesian increments and toggles the gripper.  Also publishes
 the *commanded* joint angles on /joint_commands (JointState) so a LeRobot
 recorder can use them as the action feature.
 
-Controls (run the node, then press keys in the SAME terminal):
-    w/a/s/d   X/Y coarse (±0.02 m)
-    q/e       Z up/down coarse (±0.02 m)
-    i/j/k/l   X/Y fine (±0.005 m)
-    u/o       Z up/down fine (±0.005 m)
-    r/f       pitch ±0.2 rad
-    space     toggle gripper open/close
-    x         print current target
-    Ctrl-C    quit
-
 Run:
     ros2 run modular_arm_kinematics keyboard_teleop
 """
-import select 
-import sys 
-import termios
-import threading
-import tty
+import select # for select.select() to seek for keyboard input without blocking 
+import sys    # for sys.stdin to read keyboard input 
+import termios  # for termios.tcgetattr() and termios.tcsetattr() to change terminal settings
+
+import threading # threading needed to protect shared state (target and gripper) between the keyboard thread and the ROS2 callbacks
+
+import tty # for tty.setraw() to set the terminal to raw mode so we can read one key at a time without waiting for Enter
 
 import rclpy
 from rclpy.node import Node

@@ -4,7 +4,7 @@ Run:
     ros2 launch modular_arm_teleop teleop.launch.py
 
 This launches:
-  1.  Gazebo + arm + controllers (via modular_arm_description)
+  1.  Gazebo + arm + controllers (via robot_arm_description)
   2.  The teleop_node that reads the Arduino leader arm over serial
       and streams joint commands.
 
@@ -21,7 +21,7 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    description_share = get_package_share_directory("modular_arm_description")
+    description_share = get_package_share_directory("robot_arm_description")
     teleop_share = get_package_share_directory("modular_arm_teleop")
 
     teleop_params = os.path.join(teleop_share, "config", "teleop_params.yaml")

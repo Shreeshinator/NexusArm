@@ -30,3 +30,6 @@ venv/
 # OS
 .DS_Store
 Thumbs.db
+
+# Internal contributor notes (not for end-users)
+AGENTS.md

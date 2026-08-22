@@ -3,13 +3,13 @@
 <package format="3">
   <name>modular_arm_bringup</name>
   <version>0.1.0</version>
-  <description>Top-level launch files that bring up the full stack: Gazebo + robot + controllers + kinematics node.</description>
+  <description>Top-level launch files that bring up the sim stack: Gazebo + robot + controllers + kinematics node.</description>
   <maintainer email="shreeshtripathi13@gmail.com">Shreesh Raj Tripathi</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <exec_depend>modular_arm_description</exec_depend>
+  <exec_depend>robot_arm_description</exec_depend>
   <exec_depend>modular_arm_kinematics</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>

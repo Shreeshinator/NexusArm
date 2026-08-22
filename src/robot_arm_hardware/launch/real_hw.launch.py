@@ -4,6 +4,7 @@ Usage:
     ros2 launch robot_arm_hardware real_hw.launch.py serial_port:=/dev/ttyACM0
 """
 from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
@@ -23,4 +24,18 @@ def generate_launch_description():
         ],
     )
 
-    return LaunchDescription([hw_interface])
+    return LaunchDescription(
+        [
+            DeclareLaunchArgument(
+                "serial_port",
+                default_value="/dev/ttyACM0",
+                description="Serial device for the Arduino Uno R3 servo bridge (e.g. /dev/ttyACM0 or /dev/ttyUSB0).",
+            ),
+            DeclareLaunchArgument(
+                "baud_rate",
+                default_value="115200",
+                description="Baud rate for the serial link. Must match Serial.begin(...) in the Arduino sketch.",
+            ),
+            hw_interface,
+        ]
+    )
