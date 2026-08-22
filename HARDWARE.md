@@ -60,110 +60,128 @@ Verify: `ros2 topic echo /joint_states --once`, `ros2 topic hz /front_cam/image_
 
 ---
 
-## VS CODE SSH — FULL GUIDE: LAPTOP/WSL → UNO Q → REAL ARM (START TO FINISH)
+## VS CODE SSH — PERFECT GUIDE: LAPTOP/WSL → UNO Q → REAL ARM (START TO FINISH)
 
-> **For you, step-by-step.** You sit at your laptop (Windows + WSL or Linux). The Uno Q is the tiny Linux board next to the arm. You control it from VS Code via SSH. Same ROS code runs on laptop (native) or Uno Q (in Docker lunchbox).
+> **For you, step-by-step. Researched for Uno Q (2025+).** You sit at your laptop (Windows + WSL or Linux). The Uno Q is the tiny Linux board next to the arm: **Qualcomm QRB2210 + STM32U585, Debian 13 “Trixie” arm64, 16/32 GB eMMC, soldered — no SD card.** Same ROS code runs natively on laptop (`colcon build`) or on Uno Q **in Docker** (lunchbox). App Lab is preinstalled and uses Docker internally.
 
 ### Step 0 — What you need where
-| Machine | Role | OS | Install thing |
+| Machine | Role | OS | You install |
 |---|---|---|---|
-| **Laptop** (your daily driver) | Edit code, flash Arduino, run sim | Windows+WSL Ubuntu 24.04 or native Ubuntu | VS Code + Remote-SSH extension |
-| **Uno Q** (edge brain) | Runs real arm + cameras (Docker) | Ubuntu/Debian Linux (on the board) | Docker only |
-| **Uno R3** (Arduino) | Talks to servos | Arduino firmware `servo_bridge.ino` | Flashed once via USB |
+| **Laptop** (your daily) | Edit, sim, flash fallback | Windows+WSL Ubuntu 24.04 or native Ubuntu | VS Code + Remote-SSH |
+| **Uno Q** (edge brain) | Runs real arm + cameras **in Docker** | **Debian 13 Trixie arm64** (onboard) | **Nothing — Docker is already there** |
+| **Uno R3** (Arduino) | Talks to 6 servos via `servo_bridge.ino` | Arduino firmware | Flashed once over USB |
 
-### Step 1 — Find Uno Q on your network
-1. Plug Uno Q power + Ethernet/WiFi (same WiFi as your laptop & phone).
-2. Find its IP: on your router admin page, or plug HDMI/keyboard and run `hostname -I`, or `ping unoq.local` / `ping uno.local`.
-3. Test from laptop terminal (WSL/PowerShell/Linux): `ping <IP>` should reply. Remember it, e.g. `192.168.1.42`. Default user is often `unoq`, `ubuntu`, or `root` — check your Uno Q docs (try `ssh unoq@192.168.1.42`).
+**Crucial Uno Q facts (so you don't break it):**
+* **User is ALWAYS `arduino`** — not `unoq`/`ubuntu`/`root`. Factory password `arduino`/`arduino` → during first App Lab onboarding you pick your own name + password. After that, `arduino` + *your* password is the only login (change anytime with `passwd` on board).
+* **SSH is auto-enabled by App Lab onboarding** (Network Mode + `avahi-daemon` + `ssh.service`). You don't `sudo systemctl enable ssh` unless you skipped App Lab. If SSH `Connection refused`, run on board via `adb shell`: `sudo systemctl status ssh` / `sudo ssh-keygen -A && sudo systemctl start sshd`.
+* **Docker is PRE-INSTALLED** — App Lab uses containers. **DO NOT** run `curl https://get.docker.com | sh` — it warns “Docker appears installed” and can break the existing install. Just check `docker --version`.
+* **Disk is small** — 16 GB eMMC, ~4 GB can be `/var/lib/docker/overlay2`. Don't `docker system prune -f` blindly while App Lab apps run. If full, see Troubleshooting § Disk.
 
-### Step 2 — VS Code SSH setup (one-time, 2 min)
-1. Install VS Code: `https://code.visualstudio.com`
-2. Open VS Code → Extensions (Ctrl+Shift+X) → search **Remote - SSH** (by Microsoft) → Install.
-3. `Ctrl+Shift+P` → type `Remote-SSH: Add New SSH Host` → enter `ssh unoq@<IP>` (use your IP/user) → pick the first `~/.ssh/config` file it suggests.
-4. `Ctrl+Shift+P` → `Remote-SSH: Connect to Host` → pick `unoq@<IP>` → new VS Code window opens. Bottom-left says `SSH: unoq@<IP>` when connected. First time, accept fingerprint `yes`.
-5. If password fails: same WiFi? user wrong? try `ssh unoq@<IP>` in a normal terminal to debug. On Uno Q run `passwd` to set password if needed.
+### Step 1 — First boot → find Uno Q on network
+1. Plug USB-C **data** cable (charge-only won't work) from Uno Q USB-C to laptop, plus power delivery via dongle. Wait ~60 s after power — App Lab needs time to appear in `adb devices`.
+2. Do App Lab onboarding once: open Arduino App Lab → it finds Uno Q via **mDNS / Network Mode** → set **board name** (e.g. `unoq`, unique per board), WiFi SSID/password, Linux password. This enables SSH + WiFi.
+3. Find it from laptop terminal (WSL/Linux/macOS/WSL):
+   ```bash
+   ping unoq.local            # use YOUR board name from onboarding
+   ping 192.168.1.x           # or IP from App Lab Settings / router admin / on board via HDMI: `hostname -I`
+   ssh arduino@unoq.local     # mDNS, no IP needed — needs same WiFi, firewall must allow mDNS (Windows Firewall can block)
+   # Fallback without WiFi — direct cable:
+   adb devices                # should list board after ~60s
+   adb shell                  # no password until setup done; after setup use your password
+   hostname -I; cat /etc/os-release  # Debian 13 Trixie aarch64
+   ```
+   If `unoq.local` fails but `192.168.1.x` works → Windows Firewall/guest WiFi/corporate VLAN blocking mDNS — use IP.
 
-**Alternative without config:** just `Ctrl+Shift+P` → `Remote-SSH: Connect to Host` → `ssh user@IP` each time.
+### Step 2 — VS Code SSH (one-time, 2 min)
+1. VS Code → Extensions (`Ctrl+Shift+X`) → **Remote - SSH** (Microsoft) → Install.
+2. **Important:** On Uno Q, VS Code Copilot/Roo extensions eat the 2/4 GB RAM. In VS Code Settings on the *remote* (Uno Q), disable Copilot on that host if you see freezes (confirmed by Edge Impulse docs).
+3. `Ctrl+Shift+P` → `Remote-SSH: Add New SSH Host` → enter `ssh arduino@unoq.local` **or** `ssh arduino@192.168.1.x` → pick first `~/.ssh/config`.
+4. `Ctrl+Shift+P` → `Remote-SSH: Connect to Host` → `arduino@unoq.local` → new window, bottom-left `SSH: unoq.local` when connected. First time `yes` to fingerprint, enter *your* Linux password from onboarding (not `arduino` anymore).
+5. Debug: `ssh arduino@unoq.local` in a normal terminal. If `Permission denied`, reset password via `adb shell`: `sudo passwd arduino`. If `Connection refused`, see Step 0 SSH fix. If board not found, check `avahi-daemon` + `ssh` are running: `sudo systemctl status avahi-daemon ssh`.
 
-### Step 3 — Clone this repo ON the Uno Q (inside VS Code)
-You are now *inside* Uno Q via VS Code. Open Terminal in VS Code (`Ctrl+`` `` `):
+### Step 3 — Clone this repo ON the Uno Q (inside VS Code `Ctrl+`` `)
+You are now *inside* Uno Q via VS Code (bottom-left confirms). Terminal is on the board:
 ```bash
-# Check you're on Uno Q (not laptop):
-hostname; cat /etc/os-release | head -1
+# Prove you're on Uno Q (not laptop):
+hostname; cat /etc/os-release | head -1   # unoq, Debian GNU/Linux 13 (trixie)
+uname -m; dpkg --print-architecture       # aarch64, arm64
 
-# Install git+docker if missing:
-sudo apt update && sudo apt install -y git docker.io docker-compose-plugin tmux
-sudo usermod -aG docker $USER  # so docker without sudo; then reconnect VS Code
+# Docker is ALREADY there — verify, don't reinstall:
+docker --version          # e.g. Docker version 26.x
+docker compose version    # e.g. v2.x  — if missing, only then: sudo apt update && sudo apt install -y docker-compose-plugin
+# NEVER run: curl https://get.docker.com | sh  (breaks App Lab containers)
 
-# Clone NexusArm (SSH key not needed — HTTPS):
+# Only tool you may need:
+sudo apt update && sudo apt install -y git tmux   # docker already present
+
+# Optional: no-sudo docker + ssh key (so you skip passwords next time):
+sudo usermod -aG docker $USER   # reconnect VS Code after
+ssh-copy-id arduino@unoq.local  # from laptop — deposits your key to ~/.ssh/authorized_keys
+
 git clone https://github.com/Shreeshinator/NexusArm.git ~/NexusArm
-cd ~/NexusArm
-ls  # should show Dockerfile, docker-compose.yml, src/
+cd ~/NexusArm && ls  # Dockerfile, docker-compose.yml, src/
 ```
-> Laptop/WSL native side: same clone works: `git clone https://github.com/Shreeshinator/NexusArm.git` then `colcon build` per `docs/01_SETUP.md`. WSL vs Uno Q diverge *only* here — laptop runs `colcon build` directly, Uno Q uses Docker (next).
+> **Laptop/WSL native side** — same repo but *no* Docker: `git clone ...` → `source /opt/ros/jazzy/setup.bash && colcon build --symlink-install` per `docs/01_SETUP.md`. WSL vs Uno Q diverge only here.
 
-### Step 4 — Flash Uno R3 firmware (plugged into Uno Q USB)
-In the same VS Code terminal on Uno Q:
+### Step 4 — Flash Uno R3 firmware (Uno R3 USB plugged into Uno Q USB-A)
+In same VS Code terminal on Uno Q:
 ```bash
-ls /dev/ttyACM* /dev/ttyUSB*  # Uno R3 usually /dev/ttyACM0
-# Via Arduino IDE (easiest): forward USB or flash from laptop instead — see §Flash below
-# Via CLI on Uno Q:
+ls /dev/ttyACM* /dev/ttyUSB* /dev/serial/by-id/*  # Uno R3 usually /dev/ttyACM0
 sudo apt install -y arduino-cli
 arduino-cli config init 2>/dev/null || true
 arduino-cli core update-index && arduino-cli core install arduino:avr
 arduino-cli compile --fqbn arduino:avr:uno sketch/servo_bridge
 arduino-cli upload -p /dev/ttyACM0 --fqbn arduino:avr:uno sketch/servo_bridge
-dmesg | tail  # should show ttyACM0
+dmesg | tail; ls -l /dev/ttyACM0  # heartbeat LED blinks 500 ms if alive
 ```
-If flashing fails, unplug/replug Uno R3 USB, check `groups` includes `dialout`/`docker`.
+If fails: unplug/replug Uno R3, `groups` must contain `dialout` (re-login after `sudo usermod -aG dialout $USER`), or flash from laptop via Arduino IDE instead (same sketch, same port).
 
 ### Step 5 — Build & start Docker lunchbox (Uno Q side)
 ```bash
 cd ~/NexusArm
-docker compose build          # first time 5-10 min (ros:jazzy multi-arch, venv pinned)
-docker compose up -d          # starts container in background — sleep infinity, NO auto ROS
-docker compose ps             # should show arm-stack Up
+docker compose build          # first pull 5-10 min (ros:jazzy multi-arch, venv pinned lerobot==0.6.1). Slower on 2 GB model — be patient.
+docker compose up -d          # sleep infinity — container Up but NO auto ROS (you control it)
+docker compose ps             # arm-stack Up
 ```
-Open VS Code terminal splits for multiple nodes — **one SSH, many windows via `tmux`**:
+One SSH → many terminals via `tmux` (essential — Debian shell is headless):
 ```bash
-tmux new -s arm   # one SSH = many panes. Install if missing: sudo apt install tmux
-# Window 0 — arm + cameras:  (Ctrl-B C = new window, Ctrl-B N/P = switch, Ctrl-B D = detach)
+tmux new -s arm   # sudo apt install tmux if missing
+# Window 0 — arm + cameras (keep running):
 docker compose exec arm bash
 source /opt/ros/jazzy/setup.bash && source /workspace/install/setup.bash && source /opt/venv/bin/activate
 ros2 launch robot_arm_hardware real_bringup.launch.py serial_port:=/dev/ttyACM0 front_url:=http://<PHONE_IP>:4747/video fps:=15.0
-# Keep this running. Ctrl-B C for next window.
+# Ctrl-B C = new window, Ctrl-B N/P = switch, Ctrl-B D = detach (keeps running after close)
 ```
-> Leave Window 0 running. Every other task gets its own window via `Ctrl-B C` + same `docker compose exec arm bash` + `source ...`.
+> Leave Window 0 running. Every other task gets own `Ctrl-B C` + `docker compose exec arm bash` + `source ...`.
 
 ### Step 6 — Verify real stack is alive (Window 1)
 ```bash
-# New tmux window: Ctrl-B C
+# Ctrl-B C → new window
 docker compose exec arm bash
 source /opt/ros/jazzy/setup.bash && source /workspace/install/setup.bash && source /opt/venv/bin/activate
-ros2 topic list | grep -E "joint|front_cam"   # should show /joint_states, /front_cam/image_raw/compressed
-ros2 topic hz /front_cam/image_raw/compressed  # ~10-15 Hz if phone camera URL correct
+ros2 topic list | grep -E "joint|front_cam"   # /joint_states, /front_cam/image_raw/compressed
+ros2 topic hz /front_cam/image_raw/compressed  # ~10-15 Hz if phone URL correct
 ros2 service call /modular_arm/move_to modular_arm_interfaces/srv/MoveTo "{x:0.27,y:0,z:0.08,pitch:-1.57,gripper:0,duration_sec:1.5}"
-# Arm should home. Try: gripper:1.0 to close, x:0.25 to move.
+# Arm should home. Try gripper:1.0, x:0.25. See docs/07_CAMERA_BRIDGE.md for phone URL.
 ```
-Phone camera `FRONT_URL`: same WiFi, open `http://<PHONE_IP>:4747/video` in browser first to confirm, then paste into `front_url:=`. See `docs/07_CAMERA_BRIDGE.md`.
+Phone `FRONT_URL` must be same WiFi as Uno Q — test `http://<PHONE_IP>:4747/video` in laptop browser first.
 
-### Step 7 — Data / Inference (Windows 2, 3...)
-Same pattern — each is a new tmux window:
+### Step 7 — Teleop / Data / Inference (Windows 2, 3...)
+Each is a new `Ctrl-B C` window:
 ```bash
-# Teleop:
 docker compose exec arm bash; source ...; ros2 run robot_arm_hardware keyboard_teleop
-# Recorder (from Window 2):
+# Recorder:
 .venv/bin/python lerobot-ros2-recorder.py --repo-id your/dataset --fps 15 --cams front_cam
-# Inference (after training, see docs/08_TRAINING.md):
+# Inference (after training docs/08_TRAINING.md, task must be "place the block in the bowl"):
 .venv/bin/python -m robot_arm_hardware.lerobot_infer --ros-args -p hf_repo:=your/policy -p enable_robot:=true -p n_action_steps:=50
 ```
-Detach: `Ctrl-B D` (keeps running after you close laptop). Reattach: `tmux attach -t arm`. Without tmux, just open more VS Code terminals — each `Remote-SSH: New Window` is another `docker compose exec`.
+Detach: `Ctrl-B D`, reattach: `tmux attach -t arm`. Without tmux, open more VS Code windows via `Remote-SSH: New Window` — each `docker compose exec arm bash`.
 
-### End-to-end cheat sheet (copy-paste after first SSH):
+### End-to-end cheat sheet (after first SSH):
 ```bash
 cd ~/NexusArm && docker compose up -d && tmux new -s arm
 # W0: docker compose exec arm bash → source ... → ros2 launch robot_arm_hardware real_bringup...
-# W1: docker compose exec arm bash → tests / inference / recorder
+# W1: docker compose exec arm bash → ros2 topic hz / service tests / inference
 ```
 
 ## Uno Q + Docker (edge brain) — BEGINNER REFERENCE
@@ -232,8 +250,13 @@ source /opt/ros/jazzy/setup.bash && source /workspace/install/setup.bash && sour
 
 ## Troubleshooting
 
+* `ssh: Could not resolve unoq.local` → mDNS blocked by firewall/guest WiFi — use IP `ssh arduino@192.168.1.x`; check `avahi-daemon` running: `sudo systemctl status avahi-daemon`. App Lab must have done onboarding (enables Network Mode).
+* `Connection refused port 22` → App Lab onboarding not done: `adb shell` → `sudo systemctl stop sshd; sudo ssh-keygen -A; sudo systemctl start sshd; sudo systemctl enable ssh`.
+* `Permission denied` → wrong password: default only pre-setup is `arduino`; after setup it's *your* password. Reset: `adb shell` → `sudo passwd arduino`.
 * `Cannot open /dev/ttyACM0` → `sudo usermod -aG dialout $USER` + re-login, or `SERIAL_PORT=/dev/ttyUSB0 docker compose up` if Uno shows as USB0.
-* `camera topics empty` → phone/ESP32 must be same WiFi as host/Uno Q; verify URL in browser before passing to `FRONT_URL`.
+* `camera topics empty` → phone/ESP32 must be same WiFi as Uno Q; verify URL in browser before `FRONT_URL`.
 * `Gripper crosses over` → travel 0.015 m matches finger collision `y±0.019`; don't increase `upper` without matching `GRIPPER_MAX_TRAVEL`.
+* `No space left` (16 GB eMMC, `/var/lib/docker/overlay2` ~4 GB) → App Lab docker fills root. Check: `df -h; du -sh /var/lib/docker`. Careful: `docker system prune -f` deletes App Lab containers — stop apps first. Long-term fix: move docker to /home per [Arduino Forum p-koellner 2026-07-07](https://forum.arduino.cc/t/uno-q-disk-space/1424766): `sudo systemctl stop docker`, `rsync -a /var/lib/docker /home/var/lib`, `rm -rf /var/lib/docker`, bind-mount via `/etc/fstab`.
+* `VS Code freezes on Uno Q (2 GB)` → disable Copilot/Roo on remote host (known RAM issue).
 
 Credits: mechanical design by **Emre Kalem (@emrekalem)** — MakerWorld Standard Digital File License.
