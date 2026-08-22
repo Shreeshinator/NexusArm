@@ -257,19 +257,26 @@ ros2 service call /modular_arm/move_to modular_arm_interfaces/srv/MoveTo "{x: 0.
 # av was 18.1.0 False (no av.option) → downgrade to wheel that has av.option:
 pip show av | grep Version  # 18.1.0
 pip uninstall -y av
-pip install --no-cache-dir --only-binary=av "av==14.2.0"  # 12.3.0/14.2.0/15.0 have av.option
+pip install --no-cache-dir --only-binary=av "av==14.2.0"  # 12.3.0/14.2.0 have av.option
 python -c "import av; print(av.__version__, hasattr(av,'option'))"  # 14.2.0 True
-# torch 2.11 has dotprod → Illegal instruction on A53 (QRB2210) → downgrade to baseline without dotprod:
-pip show torch | grep Version  # 2.11.0
-pip uninstall -y torch torchvision
-pip install --no-cache-dir --only-binary=:all: "torch==2.4.0" "torchvision==0.19.0" --index-url https://download.pytorch.org/whl/cpu
+# torch 2.11 has dotprod → Illegal instruction on A53 (QRB2210) BUT downgrading to 2.4.0 breaks lerobot 0.6.1 (requires torch>=2.7):
+# pip's resolver error you saw: lerobot 0.6.1 requires torch<2.12.0,>=2.7, but you have torch 2.4.0
+# FIX: Keep torch 2.7+ (satisfies lerobot) and disable dotprod via env — QRB2210 A53 is armv8-a without dotprod:
+pip uninstall -y torch torchvision  # if you already did 2.4.0
+pip install --no-cache-dir --only-binary=:all: "torch==2.7.1" "torchvision==0.22.0" --index-url https://download.pytorch.org/whl/cpu
+# Force OpenBLAS to use generic ARMv8 (no SDOT) — fixes Illegal instruction without breaking lerobot deps:
+export OPENBLAS_CORETYPE=ARMV8
+export OPENBLAS_VERBOSE=0
 python -c "import torch; x=torch.randn(2,2); print(x @ x)"  # must NOT Illegal instruction
+# Keep this export for lerobot_infer below (add to same terminal before python -m ...)
 
 # 6. Terminal 3 (W2) — ACT with HF_TOKEN for faster download (replace hf_... with your token from huggingface.co/settings/tokens):
-docker compose exec -e HF_TOKEN=hf_YOUR_TOKEN_HERE arm bash
-# ^ must include arm bash after -e (your earlier error: requires at least 2 arg(s))
+docker compose exec -e HF_TOKEN=hf_YOUR_TOKEN_HERE -e OPENBLAS_CORETYPE=ARMV8 arm bash
+# ^ must include arm bash after -e (your earlier error: requires at least 2 arg(s)) and pass OPENBLAS fix for A53
 source /opt/ros/jazzy/setup.bash && source /workspace/install/setup.bash && source /opt/venv/bin/activate
 export HF_HUB_ENABLE_HF_TRANSFER=1  # 2-3x faster if hf_transfer installed (pip show hf_transfer)
+export OPENBLAS_CORETYPE=ARMV8
+export OPENBLAS_VERBOSE=0
 python -m robot_arm_hardware.lerobot_infer --ros-args -p hf_repo:=shreeshinator/arm-pick-blocks-act-first -p enable_robot:=true -p fps:=15 -p n_action_steps:=50
 # Log: homing complete — policy running → then ros2 topic hz /joint_command 15Hz (was waiting for /front_cam + /joint_states, now publishing)
 # First run downloads ~400MB to /home/arduino/docker hf-cache (17G), next runs instant
@@ -417,7 +424,8 @@ docker compose exec arm bash  # then source ... && ros2 launch real_bringup...
 * `AttributeError: module 'av' has no attribute 'option'` at `pyav_utils.py:73` → Same `av` version mismatch (`av 18.1.0 False`), downgrade to `av==14.2.0` as above. Type hint `av.option.Option` only
 * `Package libavdevice was not found ... REQUIRED ffmpeg 7` when `pip install av` → `ros:jazzy-ros-base` has `ffmpeg 6` (`libav 59`), `av` source needs `ffmpeg 7` + `libav*dev`; use `--only-binary=av` wheel (no dev needed) or `apt install ffmpeg libavcodec-dev ...` then `pip install av==14.2.0`
 * `requires at least 2 arg(s), only received 0` on `docker compose exec -e HF_TOKEN=...` → Forgot `arm bash`: `docker compose exec -e HF_TOKEN=hf_... arm bash` (needs `SERVICE COMMAND`)
-* `Illegal instruction (core dumped)` after `homing complete — policy running` → `torch 2.11` `aarch64` wheel compiled `armv8.2-a+dotprod` but `QRB2210 4×A53` is `armv8-a` without `dotprod` → `SDOT` illegal. Downgrade live (no rebuild): `pip uninstall -y torch torchvision && pip install --only-binary=:all: "torch==2.4.0" "torchvision==0.19.0" --index-url https://download.pytorch.org/whl/cpu` (baseline, no dotprod) → `python -c "import torch; x=torch.randn(2,2); print(x@x)"` must not crash. Keep `av==14.2.0` + `HF_TOKEN` + `fps 15`
+* `Illegal instruction (core dumped)` after `homing complete — policy running` → `torch 2.11` `aarch64` wheel compiled `armv8.2-a+dotprod` but `QRB2210 4×A53` is `armv8-a` without `dotprod` → `SDOT` illegal. **Do NOT downgrade to 2.4.0** — breaks `lerobot 0.6.1 requires torch>=2.7` (your `ERROR: lerobot requires torch<2.12.0,>=2.7, but you have 2.4.0`). Live fix (no rebuild): `pip install "torch==2.7.1" "torchvision==0.22.0" --index-url https://download.pytorch.org/whl/cpu` (satisfies lerobot) + `export OPENBLAS_CORETYPE=ARMV8` (forces generic ARMv8, no SDOT) → `python -c "import torch; x=torch.randn(2,2); print(x@x)"` must not crash. Keep `av==14.2.0` + `HF_TOKEN` + `fps 15`
+* `ERROR: pip's dependency resolver ... lerobot 0.6.1 requires torch<2.12.0,>=2.7, but you have torch 2.4.0` → You downgraded too far. Reinstall `torch==2.7.1 torchvision==0.22.0` (satisfies `>=2.7,<2.12`) + `export OPENBLAS_CORETYPE=ARMV8` instead of `2.4.0`
 * `still waiting for /modular_arm/move_to ...` then `homing ... waiting 2.0s` forever → W0 `real_bringup` not running or `serial_port` wrong — `ros2 topic list | grep modular_arm` must show `/modular_arm/move_to`
 * `policy timer started ... waiting for /front_cam/... + /joint_states` but not publishing `/joint_command` → Camera or joint_state `0Hz`: `ros2 topic hz /front_cam/image_raw/compressed` and `ros2 topic echo /joint_states --once` in W1 must be `>0Hz` while W0 `real_bringup fps:=15.0` running
 * `Deleted app-bricks/python-apps-base` after prune `-a --volumes` → **Recovery:** `docker pull ghcr.io/arduino/app-bricks/python-apps-base:0.12.0`, verify `docker images | grep app-bricks`. Do NOT `prune -a --volumes` again.
