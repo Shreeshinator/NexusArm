@@ -10,9 +10,9 @@ Repo root **is** the colcon workspace (`build/`/`install/`/`log/` gitignored). T
 
 | Criterion | Why NexusArm wins |
 |---|---|
-| ⚙️ Functionality (40%) | Fully tested end-to-end — same `MoveTo` in sim, real hardware, and ACT policy. Verified on Uno Q QRB2210, `fps 15`. |
-| 💡 Innovation (25%) | One cheap autonomy stack — custom MJPEG `camera_bridge`, ACT trained on real data, one API replaces $30k arms. |
-| 📄 Documentation (20%) | Excellent docs everywhere — BOM + schematics + code explained inline, every step reproducible. |
+| ⚙️ Functionality (40%) | Tested and verified end-to-end — same `MoveTo` in sim and real hardware. Works on laptop and Uno Q. Full bringup verified `QRB2210`, `fps 15`. |
+| 💡 Innovation (25%) | Ultra low-cost — **< ₹2500** to build. Even advertised "low-cost" arms cost ₹10k–30k and cheap ones lack intelligence. NexusArm fixes both: budget hardware + real autonomy (custom `camera_bridge`, ACT on real data). Bridges the gap for makers on a budget. |
+| 📄 Documentation (20%) | Beginner-friendly and excellent — BOM, schematics, and code explained wherever needed. Every step reproducible. |
 | 🎨 Presentation (15%) | One-command sim/hardware demos, clean architecture, Docker + HF artifacts public. |
 
 ## Where to start
