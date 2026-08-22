@@ -66,25 +66,41 @@ Uno Q is the SBC that **hosts the same ROS stack in Docker**; the Uno R3 stays t
 
 ### Build + run (container stays idle — you run commands yourself)
 
-```bash
-# On Uno Q (or dev laptop — multi-arch ros:jazzy)
-docker compose build
-docker compose up -d        # starts container in background (sleep infinity, no ROS auto-started)
-docker compose exec arm bash
-# now inside container — run what you need manually:
-source /opt/ros/jazzy/setup.bash && source /workspace/install/setup.bash && source /opt/venv/bin/activate
+**On Uno Q, you SSH once and use `tmux` for multiple terminals** (one SSH = many panes):
 
-# arm + cameras together
+```bash
+# On Uno Q via SSH (e.g. ssh unoq@<uno-q-ip>)
+# 1. Build + start container (no ROS auto-started — sleep infinity)
+docker compose build
+docker compose up -d
+
+# 2. Start tmux (one SSH session, many windows)
+tmux new -s arm   # if not installed: sudo apt install tmux
+
+# Inside tmux — Pane 0: arm + cameras
+docker compose exec arm bash
+source /opt/ros/jazzy/setup.bash && source /workspace/install/setup.bash && source /opt/venv/bin/activate
 ros2 launch robot_arm_hardware real_bringup.launch.py \
   serial_port:=/dev/ttyACM0 front_url:=http://<phone-ip>:4747/video fps:=15.0
+# Ctrl-B then C = new window, Ctrl-B then N/P = switch windows
 
-# or split:
-ros2 launch robot_arm_hardware real_arm.launch.py serial_port:=/dev/ttyACM0
-ros2 run robot_arm_hardware camera_bridge --ros-args -p front_url:=http://<phone-ip>:4747/video
+# Pane 1: inference / teleop / recorder (new tmux window)
+# Ctrl-B C, then:
+docker compose exec arm bash
+source /opt/ros/jazzy/setup.bash && source /workspace/install/setup.bash && source /opt/venv/bin/activate
+.venv/bin/python -m robot_arm_hardware.lerobot_infer --ros-args -p hf_repo:=your/policy -p enable_robot:=true
+# or: ros2 run robot_arm_hardware keyboard_teleop
+# or: .venv/bin/python lerobot-ros2-recorder.py --repo-id your/dataset --fps 15 ...
 
-# then in another exec shell, test motion:
+# Pane 2: quick checks
+docker compose exec arm bash
 ros2 service call /modular_arm/move_to modular_arm_interfaces/srv/MoveTo "{x:0.27,y:0,z:0.08,pitch:-1.57,gripper:0,duration_sec:1.5}"
+ros2 topic hz /front_cam/image_raw/compressed
 ```
+
+**tmux cheatsheet (inside SSH):** `Ctrl-B C` new window, `Ctrl-B N` next, `Ctrl-B P` prev, `Ctrl-B D` detach (keeps running), `tmux attach -t arm` reattach after disconnect.
+
+Without tmux, you can also open **multiple SSH sessions** and each runs its own `docker compose exec arm bash` — same effect, just more connections.
 
 What `docker-compose.yml` does:
 * `FROM ros:jazzy` (aarch64 + x86_64), venv `/opt/venv --system-site-packages` pinned `lerobot==0.6.1 numpy==1.26.4 opencv-python-headless h5py setuptools==79.* CPU torch`, `colcon build --symlink-install`.
