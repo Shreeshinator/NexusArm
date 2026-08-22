@@ -136,55 +136,72 @@ dmesg | tail; ls -l /dev/ttyACM0  # heartbeat LED blinks 500 ms if alive
 ```
 If fails: unplug/replug Uno R3, `groups` must contain `dialout` (re-login after `sudo usermod -aG dialout $USER`), or flash from laptop via Arduino IDE instead (same sketch, same port).
 
-### Step 5 — Build & start Docker lunchbox (Uno Q side)
+### Step 5 — Build & start Docker lunchbox (Uno Q side) — IN DETAIL
+**What happens here:** `docker compose build` reads `Dockerfile` and downloads `ros:jazzy` (~2 GB, multi-arch x86_64/arm64 so it works on laptop *and* Uno Q aarch64, first time 5-10 min slower on 2 GB Uno Q — shows pulling layers). It creates a venv `/opt/venv` pinned `lerobot==0.6.1 numpy==1.26.4 setuptools==79.*` + CPU `torch`, copies `src/`, runs `colcon build --symlink-install`. `docker compose up -d` then **creates the running container** `arm-stack` from that image (you see `Creating arm-stack ... done`), mounts `src/` live + `hf-cache`, binds `/dev/ttyACM0` + `host` network, and runs `sleep infinity` — i.e. **it sits idle, no ROS auto-started** (you asked for manual). `docker compose ps` proves it's `Up`.
+
 ```bash
 cd ~/NexusArm
-docker compose build          # first pull 5-10 min (ros:jazzy multi-arch, venv pinned lerobot==0.6.1). Slower on 2 GB model — be patient.
-docker compose up -d          # sleep infinity — container Up but NO auto ROS (you control it)
-docker compose ps             # arm-stack Up
+docker compose build          # builds image nexusarm-arm (~5-10 min first, cached next time)
+docker compose up -d          # starts container in background — sleep infinity, NO auto ROS
+docker compose ps             # should show arm-stack Up X seconds
+docker logs arm-stack         # should be empty (we slept, not launched)
 ```
-One SSH → many terminals via `tmux` (essential — Debian shell is headless):
-```bash
-tmux new -s arm   # sudo apt install tmux if missing
-# Window 0 — arm + cameras (keep running):
-docker compose exec arm bash
-source /opt/ros/jazzy/setup.bash && source /workspace/install/setup.bash && source /opt/venv/bin/activate
-ros2 launch robot_arm_hardware real_bringup.launch.py serial_port:=/dev/ttyACM0 front_url:=http://<PHONE_IP>:4747/video fps:=15.0
-# Ctrl-B C = new window, Ctrl-B N/P = switch, Ctrl-B D = detach (keeps running after close)
-```
-> Leave Window 0 running. Every other task gets own `Ctrl-B C` + `docker compose exec arm bash` + `source ...`.
 
-### Step 6 — Verify real stack is alive (Window 1)
+**Now — run ROS yourself. You need 2-3 terminals. With VS Code SSH this is EASY — no tmux required:**
+
+> **What is W0 / W1?** Just labels for **Terminal Tabs**. `W0` = Window 0 = Terminal 1, `W1` = Terminal 2. In the old `tmux` world these were `Ctrl-B C` windows inside one SSH. With **VS Code SSH you already have multiple terminals** — click `+` (New Terminal) in VS Code. No `Ctrl-B` needed. `tmux` is only if you use plain `ssh` from a single laptop Terminal and want to keep things alive after closing the laptop.
+
+**Method A — VS Code SSH (recommended, easiest):**
+1. In VS Code on Uno Q, open Panel → Terminal (`Ctrl+` ` `` `). You see `arduino@unoq:~/NexusArm$`.
+2. Click `+` to add **Terminal 1 (W0)** and **Terminal 2 (W1)** (and 3 if you want). Top dropdown lists them.
+3. In **every** terminal you must `exec` into the **same** container and `source` ROS (the container is the “lunchbox” — ROS lives *inside* it):
+   ```bash
+   docker compose exec arm bash
+   source /opt/ros/jazzy/setup.bash && source /workspace/install/setup.bash && source /opt/venv/bin/activate
+   # prompt becomes root@arm-stack:/workspace#
+   ```
+   `docker compose exec arm bash` = “open a shell *inside* the running container”. Without it you’re on bare Debian, not ROS.
+
+**Terminal 1 (W0) — KEEP THIS RUNNING (arm + cameras):**
 ```bash
-# Ctrl-B C → new window
+# (already exec'd + sourced above in W0)
+ros2 launch robot_arm_hardware real_bringup.launch.py serial_port:=/dev/ttyACM0 front_url:=http://<PHONE_IP>:4747/video fps:=15.0
+# This blocks — leaves it open. It starts hw_interface + hw_move_to + camera_bridge together.
+# If you Ctrl+C it, the arm stops. Leave W0 alone.
+```
+
+**Terminal 2 (W1) — Tests / teleop / recorder / inference:**
+```bash
+# In Terminal 2 (W1), again:
 docker compose exec arm bash
 source /opt/ros/jazzy/setup.bash && source /workspace/install/setup.bash && source /opt/venv/bin/activate
 ros2 topic list | grep -E "joint|front_cam"   # /joint_states, /front_cam/image_raw/compressed
 ros2 topic hz /front_cam/image_raw/compressed  # ~10-15 Hz if phone URL correct
 ros2 service call /modular_arm/move_to modular_arm_interfaces/srv/MoveTo "{x:0.27,y:0,z:0.08,pitch:-1.57,gripper:0,duration_sec:1.5}"
-# Arm should home. Try gripper:1.0, x:0.25. See docs/07_CAMERA_BRIDGE.md for phone URL.
+# Arm should home. Try gripper:1.0 to close, x:0.25 to move. See docs/07_CAMERA_BRIDGE.md.
 ```
-Phone `FRONT_URL` must be same WiFi as Uno Q — test `http://<PHONE_IP>:4747/video` in laptop browser first.
 
-### Step 7 — Teleop / Data / Inference (Windows 2, 3...)
-Each is a new `Ctrl-B C` window:
+**Terminal 3 (W2) — Extra tasks (each gets its own terminal):**
 ```bash
 docker compose exec arm bash; source ...; ros2 run robot_arm_hardware keyboard_teleop
-# Recorder:
-.venv/bin/python lerobot-ros2-recorder.py --repo-id your/dataset --fps 15 --cams front_cam
-# Inference (after training docs/08_TRAINING.md, task must be "place the block in the bowl"):
-.venv/bin/python -m robot_arm_hardware.lerobot_infer --ros-args -p hf_repo:=your/policy -p enable_robot:=true -p n_action_steps:=50
+# or .venv/bin/python lerobot-ros2-recorder.py --repo-id your/dataset --fps 15 --cams front_cam
+# or .venv/bin/python -m robot_arm_hardware.lerobot_infer --ros-args -p hf_repo:=your/policy -p enable_robot:=true -p n_action_steps:=50
 ```
-Detach: `Ctrl-B D`, reattach: `tmux attach -t arm`. Without tmux, open more VS Code windows via `Remote-SSH: New Window` — each `docker compose exec arm bash`.
+Phone `FRONT_URL` must be same WiFi — test `http://<PHONE_IP>:4747/video` in laptop browser first.
 
-### End-to-end cheat sheet (after first SSH):
+**Method B — plain `ssh` without VS Code (only then you need `tmux`):**
+If you `ssh arduino@unoq.local` from a single laptop Terminal (no VS Code), you have only one window. Then `tmux new -s arm` gives you `W0`/`W1` inside that one SSH (`Ctrl-B C` new window, `Ctrl-B N/P` switch, `Ctrl-B D` detach to keep running after you close laptop, `tmux attach -t arm` to come back). With VS Code's `+` terminals, you skip this entirely.
+
+### Step 6 — End-to-end cheat sheet (after first SSH):
 ```bash
-cd ~/NexusArm && docker compose up -d && tmux new -s arm
-# W0: docker compose exec arm bash → source ... → ros2 launch robot_arm_hardware real_bringup...
-# W1: docker compose exec arm bash → ros2 topic hz / service tests / inference
+# VS Code SSH — no tmux needed:
+cd ~/NexusArm && docker compose up -d
+# Terminal 1 (W0): docker compose exec arm bash → source ... → ros2 launch ... real_bringup...
+# Terminal 2 (W1): docker compose exec arm bash → source ... → ros2 topic hz / service tests
+# Terminal 3 (W2): docker compose exec arm bash → inference / recorder
 ```
 
-## Uno Q + Docker (edge brain) — BEGINNER REFERENCE
+## Uno Q + Docker (edge brain) — BEGINNER REFERENCE (Docker preinstalled!)
 
 ### What is Docker? What is `docker compose`?
 *Think of Docker like a lunchbox.* **Docker** packs your whole computer setup (Ubuntu, ROS Jazzy, Python packages) into one box (called an **image**) so it runs the same everywhere — your laptop or the tiny Uno Q board. You don't install ROS by hand on the Uno Q; you just run the lunchbox.
@@ -196,7 +213,7 @@ Uno Q is the SBC that **hosts the same ROS stack in Docker**; the Uno R3 stays t
 
 ### Build + run (container stays idle — you run commands yourself)
 
-**On Uno Q, you SSH once and use `tmux` for multiple terminals** (one SSH = many panes):
+**On Uno Q with VS Code SSH you already have multiple terminals (Terminal `+` button) — `tmux` is optional legacy for plain `ssh`: **
 
 ```bash
 # On Uno Q via SSH (e.g. ssh unoq@<uno-q-ip>)
