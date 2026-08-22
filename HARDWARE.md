@@ -62,9 +62,9 @@ Verify: `ros2 topic echo /joint_states --once`, `ros2 topic hz /front_cam/image_
 
 ---
 
-## VS CODE SSH — PERFECT GUIDE: LAPTOP/WSL → UNO Q → REAL ARM (START TO FINISH)
+## VS CODE SSH — GUIDE: LAPTOP/WSL → UNO Q → REAL ARM (START TO FINISH)
 
-> **For you, step-by-step. Researched for Uno Q (2025+).** You sit at your laptop (Windows + WSL or Linux). The Uno Q is the tiny Linux board next to the arm: **Qualcomm QRB2210 + STM32U585, Debian 13 “Trixie” arm64, 16/32 GB eMMC, soldered — no SD card.** Same ROS code runs natively on laptop (`colcon build`) or on Uno Q **in Docker** (lunchbox). App Lab is preinstalled and uses Docker internally.
+> **Step-by-step for Uno Q (2025+).** The Uno Q is the board next to the arm: **Qualcomm QRB2210 + STM32U585, Debian 13 “Trixie” arm64, 16/32 GB eMMC, soldered — no SD card.** The same ROS code runs natively on a laptop (`colcon build`) or on the Uno Q **in Docker** (lunchbox). App Lab is preinstalled and uses Docker internally.
 
 ### Step 0 — What you need where
 | Machine | Role | OS | You install |
@@ -96,7 +96,7 @@ Verify: `ros2 topic echo /joint_states --once`, `ros2 topic hz /front_cam/image_
 
 ### Step 2 — VS Code SSH (one-time, 2 min)
 1. VS Code → Extensions (`Ctrl+Shift+X`) → **Remote - SSH** (Microsoft) → Install.
-2. **Important:** On Uno Q, VS Code Copilot/Roo extensions eat the 2/4 GB RAM. In VS Code Settings on the *remote* (Uno Q), disable Copilot on that host if you see freezes (confirmed by Edge Impulse docs).
+2. **Important:** On Uno Q, VS Code Copilot/Roo extensions consume the available RAM. In VS Code Settings on the *remote* (Uno Q), disable Copilot on that host if freezes occur.
 3. `Ctrl+Shift+P` → `Remote-SSH: Add New SSH Host` → enter `ssh arduino@unoq.local` **or** `ssh arduino@192.168.1.x` → pick first `~/.ssh/config`.
 4. `Ctrl+Shift+P` → `Remote-SSH: Connect to Host` → `arduino@unoq.local` → new window, bottom-left `SSH: unoq.local` when connected. First time `yes` to fingerprint, enter *your* Linux password from onboarding (not `arduino` anymore).
 5. Debug: `ssh arduino@unoq.local` in a normal terminal. If `Permission denied`, reset password via `adb shell`: `sudo passwd arduino`. If `Connection refused`, see Step 0 SSH fix. If board not found, check `avahi-daemon` + `ssh` are running: `sudo systemctl status avahi-daemon ssh`.
@@ -139,7 +139,7 @@ dmesg | tail; ls -l /dev/ttyACM0  # heartbeat LED blinks 500 ms if alive
 If fails: unplug/replug Uno R3, `groups` must contain `dialout` (re-login after `sudo usermod -aG dialout $USER`), or flash from laptop via Arduino IDE instead (same sketch, same port).
 
 ### Step 5 — FIX 10GB ROOT FIRST (MANDATORY — 2 min) then Build
-**YOUR CASE: root 10GB with 9.1GB used = 239M free (98%). Slim alone CANNOT fit (not even Option C) — Docker stores everything in `/var/lib/docker` on root. Your `18G /home/arduino` has 17G free — Docker must go there:**
+**Root 10GB with 9.1GB used = 239M free (98%). Slim image alone cannot fit — Docker defaults to `/var/lib/docker` on root. The `18G /home/arduino` partition has 17G free — Docker must be moved there:**
 
 ```bash
 # Inside Uno Q (VS Code Terminal):
@@ -153,7 +153,7 @@ sudo rm -rf /var/lib/docker  # free root (optional, already copied)
 sudo systemctl start docker; df -h  # / now ~60%, Docker Root Dir: /home/arduino/docker
 docker info 2>/dev/null | grep "Docker Root Dir"  # must be /home/arduino/docker
 ```
-> This is NOT the scary "partition" you feared — no resizing, no wipe. One `echo` line tells Docker "store on /home/arduino". Reversible: `sudo rm /etc/docker/daemon.json && sudo systemctl restart docker` to undo. **Critical: `/home/docker` is still on root (239M) — must be `/home/arduino/docker` (17G).**
+> No resizing or wipe is required. One `echo` line tells Docker to store on `/home/arduino`. Reversible: `sudo rm /etc/docker/daemon.json && sudo systemctl restart docker` to undo. **Critical: `/home/docker` is still on root (239M) — must be `/home/arduino/docker` (17G).**
 
 **What happens next:** `docker compose build` reads **slim** `Dockerfile` (`ros:jazzy-ros-base`, not full desktop) and downloads ~1 GB multi-arch (first time 5-10 min slower on 2GB RAM Uno Q). It creates venv `lerobot==0.6.1` (auto `numpy 2.1.x` + `opencv 5.0`, NOT `1.26.4` bug) + `setuptools 79` + CPU `torch`, copies `src/`, runs `colcon build`. `docker compose up -d` creates `arm-stack` (`Creating arm-stack ... done`), mounts `src/` + `/dev/ttyACM0` + `host` network, runs `sleep infinity` — idle, no ROS auto-started. `docker compose ps` proves `Up`.
 
@@ -165,7 +165,7 @@ docker compose ps             # should show arm-stack Up X seconds
 docker logs arm-stack         # empty (we slept)
 ```
 
-**Option C you chose — Build on Laptop then load (avoids building on small Uno Q):** If you prefer not to build on Uno Q at all, do the FIX above first (still needed for storage!), then on **laptop/WSL** run `docker build -t nexusarm . && docker save nexusarm | gzip > nexusarm.tar.gz`, `scp nexusarm.tar.gz arduino@unoq.local:/home/arduino/`, then on Uno Q `docker load < nexusarm.tar.gz && docker compose up -d` — also lands on `/home`.
+**Option C — Build on Laptop then load (avoids building on small Uno Q):** To avoid building on the Uno Q, apply the FIX above first (still required for storage), then on **laptop/WSL** run `docker build -t nexusarm . && docker save nexusarm | gzip > nexusarm.tar.gz`, `scp nexusarm.tar.gz arduino@unoq.local:/home/arduino/`, then on Uno Q `docker load < nexusarm.tar.gz && docker compose up -d` — also lands on `/home`.
 
 **Now — run ROS yourself. You need 2-3 terminals. With VS Code SSH this is EASY — no tmux required:**
 
@@ -223,7 +223,7 @@ cd ~/NexusArm && docker compose up -d
 
 ### FULL COMMAND LIST — EVERYTHING WORKING (no rebuild, live install okay, copy-paste in order)
 
-**You already pulled `shreeshinator/nexusarm:unoq 7.15GB` → `/home/arduino/docker` 17G. This list fixes all remaining 1-day blockers (meshes `890645f`, `numpy 2.1`, `av 14.2`, `torch A53 illegal`, `HF_TOKEN`, `service call` syntax, `venv` path) without rebuilding image:**
+**Prerequisite: `shreeshinator/nexusarm:unoq 7.15GB` is pulled to `/home/arduino/docker` 17G. This list covers the remaining blockers (meshes `890645f` vendored 3M, `numpy 2.1`, `av 14.2`, `torch A53`, `HF_TOKEN`, `service call` syntax, `venv` path) without rebuilding the image:**
 
 ```bash
 # 0. Verify fixes already done (should be ✅):
@@ -262,9 +262,9 @@ pip uninstall -y av
 pip install --no-cache-dir --only-binary=av "av==14.2.0"  # 12.3.0/14.2.0 have av.option
 python -c "import av; print(av.__version__, hasattr(av,'option'))"  # 14.2.0 True
 # torch 2.11 has dotprod → Illegal instruction on A53 (QRB2210) BUT downgrading to 2.4.0 breaks lerobot 0.6.1 (requires torch>=2.7):
-# pip's resolver error you saw: lerobot 0.6.1 requires torch<2.12.0,>=2.7, but you have torch 2.4.0
+# pip resolver error when torch <2.7: lerobot 0.6.1 requires torch<2.12.0,>=2.7
 # FIX: Keep torch 2.7+ (satisfies lerobot) and disable dotprod via env — QRB2210 A53 is armv8-a without dotprod:
-pip uninstall -y torch torchvision  # if you already did 2.4.0 (wrong, breaks lerobot>=2.7)
+pip uninstall -y torch torchvision  # if 2.4.0 is installed (incompatible, lerobot requires >=2.7)
 # Use MATCHED pair: torch 2.7.0 + torchvision 0.22.0  OR  torch 2.7.1 + torchvision 0.22.1 (0.22.0 expects 2.7.0 exactly)
 pip install --no-cache-dir --only-binary=:all: "torch==2.7.0" "torchvision==0.22.0" --index-url https://download.pytorch.org/whl/cpu
 # If you prefer 2.7.1: pip install "torch==2.7.1" "torchvision==0.22.1" --index-url https://download.pytorch.org/whl/cpu
@@ -276,7 +276,7 @@ python -c "import torch; x=torch.randn(2,2); print(x @ x)"  # must NOT Illegal i
 
 # 6. Terminal 3 (W2) — ACT with HF_TOKEN for faster download (replace hf_... with your token from huggingface.co/settings/tokens):
 docker compose exec -e HF_TOKEN=hf_YOUR_TOKEN_HERE -e OPENBLAS_CORETYPE=ARMV8 arm bash
-# ^ must include arm bash after -e (your earlier error: requires at least 2 arg(s)) and pass OPENBLAS fix for A53
+# ^ must include arm bash after -e (requires SERVICE + COMMAND) and pass OPENBLAS fix for A53
 source /opt/ros/jazzy/setup.bash && source /workspace/install/setup.bash && source /opt/venv/bin/activate
 export HF_HUB_ENABLE_HF_TRANSFER=1  # 2-3x faster if hf_transfer installed (pip show hf_transfer)
 export OPENBLAS_CORETYPE=ARMV8
@@ -300,7 +300,7 @@ Uno Q is the SBC that **hosts the same ROS stack in Docker**; the Uno R3 stays t
 
 ### Build + run (container stays idle — you run commands yourself)
 
-**On Uno Q with VS Code SSH you already have multiple terminals (Terminal `+` button) — `tmux` is optional legacy for plain `ssh`: **
+**On Uno Q with VS Code SSH multiple terminals are available (Terminal `+` button) — `tmux` is optional legacy for plain `ssh`:**
 
 ```bash
 # On Uno Q via SSH (e.g. ssh unoq@<uno-q-ip>)
@@ -356,7 +356,7 @@ source /opt/ros/jazzy/setup.bash && source /workspace/install/setup.bash && sour
 
 **Why Codespaces:** Your Uno Q root is 98% (9.8G 239M free) and laptop `buildx` is slow. Codespaces is a cloud Ubuntu VM (32GB disk, `buildx` preinstalled, Docker-in-Docker) — do the heavy `docker build` there, push to your **Docker Hub** account, then Uno Q just `docker pull` (lands on `/home/docker` 17GB free).
 
-**You already fixed meshes (`890645f` real 3.0M STLs) — Codespaces build will now pass `Failed <<< robot_arm_description`.**
+**With vendored meshes (`890645f` real 3.0M STLs), the Codespaces build passes `Failed <<< robot_arm_description`.**
 
 **Steps (copy-paste):**
 
@@ -407,7 +407,7 @@ docker compose exec arm bash  # then source ... && ros2 launch real_bringup...
 * `camera topics empty` → phone/ESP32 must be same WiFi as Uno Q; verify URL in browser before `FRONT_URL`.
 * `Gripper crosses over` → travel 0.015 m matches finger collision `y±0.019`; don't increase `upper` without matching `GRIPPER_MAX_TRAVEL`.
 * `Failed <<< robot_arm_description Could not create symlink ... Alt_Govde.stl` → You had dangling symlinks (`120000`) to `/home/shreeshinator/Robotic+Arm...` outside repo. Fixed in `890645f` by vendoring real `100644` 3.0M STLs — `git pull` on Codespaces/Uno Q. Verify: `find src/robot_arm_description/meshes -type l | wc -l` must be `0`.
-* `No space left` (16 GB eMMC, root 9.8G 239M free 98% — **you hit this**) → **Must be `/home/arduino/docker` (17G), NOT `/home/docker` (239M):** `df -h` shows `/` 9.8G + `/home/arduino` 18G separate — `/home` itself is on root. **Wrong `daemon.json=/home/docker` still on root → `docker pull 3GB → no space` even after fix:**
+* `No space left` (16 GB eMMC, root 9.8G 239M free 98%) → **Must be `/home/arduino/docker` (17G), NOT `/home/docker` (239M):** `df -h` shows `/` 9.8G + `/home/arduino` 18G separate — `/home` itself is on root. **Incorrect `daemon.json=/home/docker` remains on root → `docker pull 3GB → no space`:**
   ```bash
   # On Uno Q via VS Code / adb shell — DO THIS ONCE:
   df -h  # / 9.8G 98% 239M, /home/arduino 18G 4% 17G free
@@ -428,8 +428,8 @@ docker compose exec arm bash  # then source ... && ros2 launch real_bringup...
 * `AttributeError: module 'av' has no attribute 'option'` at `pyav_utils.py:73` → Same `av` version mismatch (`av 18.1.0 False`), downgrade to `av==14.2.0` as above. Type hint `av.option.Option` only
 * `Package libavdevice was not found ... REQUIRED ffmpeg 7` when `pip install av` → `ros:jazzy-ros-base` has `ffmpeg 6` (`libav 59`), `av` source needs `ffmpeg 7` + `libav*dev`; use `--only-binary=av` wheel (no dev needed) or `apt install ffmpeg libavcodec-dev ...` then `pip install av==14.2.0`
 * `requires at least 2 arg(s), only received 0` on `docker compose exec -e HF_TOKEN=...` → Forgot `arm bash`: `docker compose exec -e HF_TOKEN=hf_... arm bash` (needs `SERVICE COMMAND`)
-* `Illegal instruction (core dumped)` after `homing complete — policy running` → `torch 2.11` `aarch64` wheel compiled `armv8.2-a+dotprod` but `QRB2210 4×A53` is `armv8-a` without `dotprod` → `SDOT` illegal. **Do NOT downgrade to 2.4.0** — breaks `lerobot 0.6.1 requires torch>=2.7` (your `ERROR: lerobot requires torch<2.12.0,>=2.7, but you have 2.4.0`). Live fix (no rebuild): `pip install "torch==2.7.0" "torchvision==0.22.0" --index-url https://download.pytorch.org/whl/cpu` (matched pair, satisfies lerobot) + `export OPENBLAS_CORETYPE=ARMV8` (forces generic ARMv8, no SDOT) → `python -c "import torch; x=torch.randn(2,2); print(x@x)"` must not crash. Keep `av==14.2.0` + `HF_TOKEN` + `fps 15`
-* `ERROR: pip's dependency resolver ... lerobot 0.6.1 requires torch<2.12.0,>=2.7, but you have torch 2.4.0` → You downgraded too far. Reinstall `torch==2.7.0 torchvision==0.22.0` (matched, `>=2.7,<2.12`) + `export OPENBLAS_CORETYPE=ARMV8` instead of `2.4.0`
+* `Illegal instruction (core dumped)` after `homing complete — policy running` → `torch 2.11` `aarch64` wheel compiled `armv8.2-a+dotprod` but `QRB2210 4×A53` is `armv8-a` without `dotprod` → `SDOT` illegal. Downgrading to `2.4.0` breaks `lerobot 0.6.1 requires torch>=2.7` (`ERROR: lerobot requires torch<2.12.0,>=2.7, but you have 2.4.0`). Live fix (no rebuild): `pip install "torch==2.7.0" "torchvision==0.22.0" --index-url https://download.pytorch.org/whl/cpu` (matched pair, satisfies lerobot) + `export OPENBLAS_CORETYPE=ARMV8` (forces generic ARMv8, no SDOT) → `python -c "import torch; x=torch.randn(2,2); print(x@x)"` must not crash. Keep `av==14.2.0` + `HF_TOKEN` + `fps 15`
+* `ERROR: pip's dependency resolver ... lerobot 0.6.1 requires torch<2.12.0,>=2.7, but you have torch 2.4.0` → Version too low. Reinstall `torch==2.7.0 torchvision==0.22.0` (matched, `>=2.7,<2.12`) + `export OPENBLAS_CORETYPE=ARMV8` instead of `2.4.0`
 * `ERROR: Cannot install torch==2.7.1 and torchvision==0.22.0 because torchvision 0.22.0 depends on torch==2.7.0` → Mismatched pair. Use **matched** `torch==2.7.0 torchvision==0.22.0` OR `torch==2.7.1 torchvision==0.22.1` (0.22.0 needs 2.7.0 exactly)
 * `still waiting for /modular_arm/move_to ...` then `homing ... waiting 2.0s` forever → W0 `real_bringup` not running or `serial_port` wrong — `ros2 topic list | grep modular_arm` must show `/modular_arm/move_to`
 * `policy timer started ... waiting for /front_cam/... + /joint_states` but not publishing `/joint_command` → Camera or joint_state `0Hz`: `ros2 topic hz /front_cam/image_raw/compressed` and `ros2 topic echo /joint_states --once` in W1 must be `>0Hz` while W0 `real_bringup fps:=15.0` running
