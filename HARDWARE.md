@@ -136,16 +136,32 @@ dmesg | tail; ls -l /dev/ttyACM0  # heartbeat LED blinks 500 ms if alive
 ```
 If fails: unplug/replug Uno R3, `groups` must contain `dialout` (re-login after `sudo usermod -aG dialout $USER`), or flash from laptop via Arduino IDE instead (same sketch, same port).
 
-### Step 5 — Build & start Docker lunchbox (Uno Q side) — IN DETAIL
-**What happens here:** `docker compose build` reads **slim** `Dockerfile` (`ros:jazzy-ros-base`, not full desktop) and downloads ~1 GB multi-arch x86_64/arm64 (works on laptop *and* Uno Q aarch64, first time 5-10 min slower on 2 GB Uno Q — shows pulling layers). It creates a venv `/opt/venv` pinned `lerobot==0.6.1` (auto pulls `numpy 2.1.x` + `opencv 5.0` aarch64, **not** pinned `1.26.4`) + `setuptools==79.*` + CPU `torch`, copies `src/`, runs `colcon build --symlink-install`. `docker compose up -d` then **creates the running container** `arm-stack` from that image (you see `Creating arm-stack ... done`), mounts `src/` live + `hf-cache`, binds `/dev/ttyACM0` + `host` network, and runs `sleep infinity` — i.e. **it sits idle, no ROS auto-started** (you asked for manual). `docker compose ps` proves it's `Up`.
+### Step 5 — FIX 10GB ROOT FIRST (MANDATORY — 2 min) then Build
+**YOUR CASE: root 10GB with 7-8GB used = only 2GB free. Slim alone CANNOT fit (not even Option C) — Docker stores everything in `/var/lib/docker` on root. Do this ONCE:**
+
+```bash
+# Inside Uno Q (VS Code Terminal):
+df -h  # confirm: / is 10G 80%, /home has space
+docker builder prune -f; docker image prune -f  # safe clean only
+sudo systemctl stop docker.socket; sudo systemctl stop docker
+sudo mkdir -p /home/docker
+echo '{"data-root":"/home/docker"}' | sudo tee /etc/docker/daemon.json
+sudo rsync -a /var/lib/docker/ /home/docker/
+sudo systemctl start docker; df -h  # / now ~60%, Docker lives on /home forever
+```
+> This is NOT the scary "partition" you feared — no resizing, no wipe. One `echo` line tells Docker "store on /home". Reversible: `sudo rm /etc/docker/daemon.json && sudo systemctl restart docker` to undo.
+
+**What happens next:** `docker compose build` reads **slim** `Dockerfile` (`ros:jazzy-ros-base`, not full desktop) and downloads ~1 GB multi-arch (first time 5-10 min slower on 2GB RAM Uno Q). It creates venv `lerobot==0.6.1` (auto `numpy 2.1.x` + `opencv 5.0`, NOT `1.26.4` bug) + `setuptools 79` + CPU `torch`, copies `src/`, runs `colcon build`. `docker compose up -d` creates `arm-stack` (`Creating arm-stack ... done`), mounts `src/` + `/dev/ttyACM0` + `host` network, runs `sleep infinity` — idle, no ROS auto-started. `docker compose ps` proves `Up`.
 
 ```bash
 cd ~/NexusArm
-docker compose build          # builds image nexusarm-arm (~5-10 min first, cached next time)
-docker compose up -d          # starts container in background — sleep infinity, NO auto ROS
+docker compose build          # now fits on /home (was No space before)
+docker compose up -d          # sleep infinity, NO auto ROS
 docker compose ps             # should show arm-stack Up X seconds
-docker logs arm-stack         # should be empty (we slept, not launched)
+docker logs arm-stack         # empty (we slept)
 ```
+
+**Option C you chose — Build on Laptop then load (avoids building on small Uno Q):** If you prefer not to build on Uno Q at all, do the FIX above first (still needed for storage!), then on **laptop/WSL** run `docker build -t nexusarm . && docker save nexusarm | gzip > nexusarm.tar.gz`, `scp nexusarm.tar.gz arduino@unoq.local:/home/arduino/`, then on Uno Q `docker load < nexusarm.tar.gz && docker compose up -d` — also lands on `/home`.
 
 **Now — run ROS yourself. You need 2-3 terminals. With VS Code SSH this is EASY — no tmux required:**
 
@@ -273,16 +289,22 @@ source /opt/ros/jazzy/setup.bash && source /workspace/install/setup.bash && sour
 * `Cannot open /dev/ttyACM0` → `sudo usermod -aG dialout $USER` + re-login, or `SERIAL_PORT=/dev/ttyUSB0 docker compose up` if Uno shows as USB0.
 * `camera topics empty` → phone/ESP32 must be same WiFi as Uno Q; verify URL in browser before `FRONT_URL`.
 * `Gripper crosses over` → travel 0.015 m matches finger collision `y±0.019`; don't increase `upper` without matching `GRIPPER_MAX_TRAVEL`.
-* `No space left` (16 GB eMMC, `/var/lib/docker/overlay2` ~4 GB — **you hit this**) → Slim Dockerfile (`ros:jazzy-ros-base`, no `ros-dev-tools`) now fixes *future* builds. **No partition move needed** (per your request). Just SAFE clean before rebuilding — **NEVER `docker system prune -a --volumes -f`** (deletes `python-apps-base:0.12.0` you just saw):
+* `No space left` (16 GB eMMC, root now 10GB with 7-8GB used → only 2GB free — **you hit this**) → **Slim alone is NOT enough even with option C** (even a pre-built image must live in `/var/lib/docker` on root). You **MUST** move Docker storage to `/home` (where 10GB is free) — 2 minutes, one-time, no data loss. Your "no partition" worked only with 16GB free; with 10GB/8GB used you have no choice:
   ```bash
-  # On Uno Q via VS Code / adb shell — BEFORE rebuilding — SAFE clean (keeps App Lab):
-  df -h; du -sh /var/lib/docker  # confirm full
-  docker builder prune -f                    # only build cache, safe
-  docker image prune -f                      # only dangling images, safe
-  docker system prune -f                     # safe prune (no -a --volumes)
-  # NOT: docker system prune -a --volumes -f  (wipes ghcr.io/arduino/app-bricks/*)
+  # On Uno Q via VS Code / adb shell — DO THIS ONCE BEFORE any build OR load:
+  df -h  # see root 10G 80% and /home with space
+  docker builder prune -f; docker image prune -f  # SAFE clean, keeps App Lab bricks
+  # NEVER docker system prune -a --volumes -f  (wipes ghcr.io/arduino/app-bricks/*)
+
+  # Move Docker to /home (permanent fix):
+  sudo systemctl stop docker.socket; sudo systemctl stop docker
+  sudo mkdir -p /home/docker
+  # Tell Docker to use /home/docker from now on:
+  echo '{"data-root":"/home/docker"}' | sudo tee /etc/docker/daemon.json
+  sudo rsync -a /var/lib/docker/ /home/docker/  # copy existing images/bricks to new place (1-2 min)
+  sudo systemctl start docker; df -h  # root should drop to ~60%, Docker now on /home
   ```
-  Then: `cd ~/NexusArm && docker compose build --no-cache` — slim now fits.
+  Then: `cd ~/NexusArm && docker compose build --no-cache` — slim (`ros:jazzy-ros-base`, no `ros-dev-tools`) now fits AND stays on `/home`. For **Option C (build on laptop)** you still need this move first, then `docker load` will also land on `/home`.
 * `Deleted app-bricks/python-apps-base` after prune `-a --volumes` → **Recovery (run now):** `docker pull ghcr.io/arduino/app-bricks/python-apps-base:0.12.0` (re-downloads ~300MB, SHA `35eb218...`), or open Arduino App Lab → it auto-repulls missing bricks on next App start. Verify: `docker images | grep app-bricks`. Do NOT prune with `-a --volumes` again.
 * `VS Code freezes on Uno Q (2 GB)` → disable Copilot/Roo on remote host (known RAM issue).
 
