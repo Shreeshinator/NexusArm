@@ -64,29 +64,38 @@ Verify: `ros2 topic echo /joint_states --once`, `ros2 topic hz /front_cam/image_
 
 Uno Q is the SBC that **hosts the same ROS stack in Docker**; the Uno R3 stays the servo bridge over `/dev/ttyACM0` bound into the container (`servo_bridge.ino:26-28`).
 
-### Build + run
+### Build + run (container stays idle — you run commands yourself)
 
 ```bash
 # On Uno Q (or dev laptop — multi-arch ros:jazzy)
 docker compose build
-# Front camera via phone DroidCam / ESP32 on same WiFi:
-FRONT_URL=http://192.168.1.10:4747/video docker compose up -d
-docker compose logs -f arm
-
-# Inside container (if needed):
+docker compose up -d        # starts container in background (sleep infinity, no ROS auto-started)
 docker compose exec arm bash
+# now inside container — run what you need manually:
+source /opt/ros/jazzy/setup.bash && source /workspace/install/setup.bash && source /opt/venv/bin/activate
+
+# arm + cameras together
+ros2 launch robot_arm_hardware real_bringup.launch.py \
+  serial_port:=/dev/ttyACM0 front_url:=http://<phone-ip>:4747/video fps:=15.0
+
+# or split:
+ros2 launch robot_arm_hardware real_arm.launch.py serial_port:=/dev/ttyACM0
+ros2 run robot_arm_hardware camera_bridge --ros-args -p front_url:=http://<phone-ip>:4747/video
+
+# then in another exec shell, test motion:
 ros2 service call /modular_arm/move_to modular_arm_interfaces/srv/MoveTo "{x:0.27,y:0,z:0.08,pitch:-1.57,gripper:0,duration_sec:1.5}"
 ```
 
 What `docker-compose.yml` does:
 * `FROM ros:jazzy` (aarch64 + x86_64), venv `/opt/venv --system-site-packages` pinned `lerobot==0.6.1 numpy==1.26.4 opencv-python-headless h5py setuptools==79.* CPU torch`, `colcon build --symlink-install`.
 * `devices: /dev/ttyACM0`, `network_mode: host` (DroidCam + HF), mounts `src/` live + `hf-cache`/`lerobot-cache` volumes.
-* Env `SERIAL_PORT/FRONT_URL/GRIPPER_URL/FPS/ENABLE_ROBOT` wired into `real_bringup.launch.py` args.
+* `command: sleep infinity` — container stays alive for manual `ros2 launch` / `ros2 run`.
 
 ### Inference on the edge
 
-Same as `docs/06_INFERENCE.md` / `08_TRAINING.md`, but from inside the container or with `ros2 run` after `docker compose exec`:
+Same as `docs/06_INFERENCE.md` / `08_TRAINING.md`, but from inside the container via `docker compose exec arm bash`:
 ```bash
+source /opt/ros/jazzy/setup.bash && source /workspace/install/setup.bash && source /opt/venv/bin/activate
 .venv/bin/python -m robot_arm_hardware.lerobot_infer --ros-args -p hf_repo:=your/policy -p enable_robot:=true -p n_action_steps:=50
 ```
 

@@ -1,8 +1,10 @@
-# Uno Q one-command stack — bind Uno R3 serial into container, share host network for DroidCam/HF.
+# Uno Q stack — bind Uno R3 serial into container, share host network for DroidCam/HF.
+# Container does NOT auto-start ROS — you run commands yourself inside (see HARDWARE.md).
 # Usage:
-#   docker compose up --build          # native dev — edit src/ locally, --symlink-install picks it up
-#   SERIAL_PORT=/dev/ttyUSB0 FRONT_URL=http://192.168.1.10:4747/video docker compose up
-# On Uno Q the device is almost always /dev/ttyACM0 (Uno R3). Override with env.
+#   docker compose up -d --build       # start container in background (no ROS yet)
+#   docker compose exec arm bash       # open shell inside, then run ros2 launch ... yourself
+# On Uno Q the device is almost always /dev/ttyACM0 (Uno R3). Override with env:
+#   SERIAL_PORT=/dev/ttyUSB0 docker compose up -d
 
 services:
   arm:
@@ -25,19 +27,8 @@ services:
       - GRIPPER_URL=${GRIPPER_URL:-}
       - FPS=${FPS:-15.0}
       - ENABLE_ROBOT=${ENABLE_ROBOT:-false}
-    command: >
-      bash -c '
-        source /opt/ros/jazzy/setup.bash &&
-        source /workspace/install/setup.bash &&
-        source /opt/venv/bin/activate &&
-        ros2 launch robot_arm_hardware real_bringup.launch.py
-          serial_port:="$${SERIAL_PORT}"
-          baud_rate:="$${BAUD_RATE}"
-          front_url:="$${FRONT_URL}"
-          gripper_url:="$${GRIPPER_URL}"
-          fps:="$${FPS}"
-      '
-    # Keep container alive even if ROS exits — `docker compose logs -f` to tail
+    command: sleep infinity
+    # Keeps container alive so you can exec and run ros2 commands manually
     restart: unless-stopped
 
 volumes:
