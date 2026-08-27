@@ -1,3 +1,5 @@
+> **📖 Docs roadmap:** not sure what to read next? See the [Documentation Roadmap](../README.md) — it gives the exact reading order for your goal.
+
 # Sim Bringup — Detailed
 
 > Friendly tip: start with option 1 — it's the easiest way to see the arm move. The other two are there when you want to dig deeper.

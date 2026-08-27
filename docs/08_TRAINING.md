@@ -1,3 +1,5 @@
+> **📖 Docs roadmap:** not sure what to read next? See the [Documentation Roadmap](README.md) — it gives the exact reading order for your goal.
+
 # Custom Training — Train ACT on Your Demos (Free: Colab / Kaggle)
 
 > You collected 50–100 clean episodes with `05_DATA_COLLECTION.md` — now turn them into a policy that runs on the real arm via `06_INFERENCE.md`. No paid GPU needed: Colab (T4, ~12 h free) or Kaggle (P100/T4×2, 30 h/week free) is enough for ACT.

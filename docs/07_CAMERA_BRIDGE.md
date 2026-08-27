@@ -1,3 +1,5 @@
+> **📖 Docs roadmap:** not sure what to read next? See the [Documentation Roadmap](README.md) — it gives the exact reading order for your goal.
+
 # Camera Bridge — Phone / ESP32 MJPEG → ROS 2
 
 The `camera_bridge` node pulls MJPEG video from a phone (DroidCam / IP Webcam) or an ESP32-CAM over WiFi, and republishes each JPEG frame as a ROS 2 `sensor_msgs/CompressedImage` — **no decoding**, almost no CPU load.

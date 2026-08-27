@@ -1,3 +1,5 @@
+> **📖 Docs roadmap:** not sure what to read next? See the [Documentation Roadmap](README.md) — it gives the exact reading order for your goal.
+
 # Hardware — Robot Assembly
 
 > Hey, let's build the real arm! This guide walks you through the mechanical + wiring build step-by-step. No scary jargon — just "do this, then that."

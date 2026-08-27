@@ -2,7 +2,7 @@
 
 > ✅ **Verified 2026-08-22 — FULL BRINGUP TESTED on Uno Q QRB2210 4GB `aarch64`, QC Debian 13, `shreeshinator/nexusarm:unoq 7.15GB`, `lerobot 0.6.1 + av 14.2.0 + torch 2.7.0/torchvision 0.22.0 + OPENBLAS_CORETYPE=ARMV8`, `fps 15`, `HF_TOKEN` HF_TRANSFER**
 
-Full wiring + flash + bringup for the **real arm**. Native Ubuntu is the default; **Uno Q** adds the Docker container as the “edge brain” (same Uno R3 firmware).
+Full wiring + flash + bringup for the **real arm**. Native **Ubuntu** (your laptop) is the default; the **Uno Q** is different — its onboard OS is **Debian 13 (Trixie)**, *not* Ubuntu — and it runs the same ROS stack inside the Ubuntu-based `shreeshinator/nexusarm:unoq` Docker container as the "edge brain" (same Uno R3 firmware).
 
 > For mechanical build + perfboard details see `docs/03_HARDWARE.md` + pin table in `sketch/servo_bridge/README.md`. This file is the one-command bringup + Uno Q port guide.
 
@@ -301,7 +301,7 @@ python -m robot_arm_hardware.lerobot_infer --ros-args -p hf_repo:=shreeshinator/
 
 ## Uno Q + Docker — Concepts (one-minute explainer)
 
-*Think of Docker like a lunchbox.* **Docker** packs Ubuntu + ROS Jazzy + Python into one **image** so it runs identically on laptop and Uno Q. `Dockerfile` = recipe to *build* the lunchbox. `docker-compose.yml` = recipe to *run* it (devices, network, folders). `docker compose` is just shorthand for `docker run --device /dev/ttyACM0 --net host -v ./src:/workspace/src ...` — same result, fewer typos.
+*Think of Docker like a lunchbox.* The **Docker image** packs Ubuntu + ROS Jazzy + Python (that's why the image is Ubuntu-based), while the **Uno Q host itself is Debian 13** — the container hides that difference so ROS behaves the same on laptop and Uno Q. `Dockerfile` = recipe to *build* the lunchbox. `docker-compose.yml` = recipe to *run* it (devices, network, folders). `docker compose` is just shorthand for `docker run --device /dev/ttyACM0 --net host -v ./src:/workspace/src ...` — same result, fewer typos.
 
 - Uno Q = edge brain (QRB2210) that **hosts the ROS stack in Docker**; Uno R3 stays the servo bridge on `/dev/ttyACM0` (`servo_bridge.ino:26-28`).
 - Container is `sleep infinity` — you `docker compose exec arm bash` then `source ... && ros2 launch ...` yourself. **Canonical 3-terminal flow + FULL COMMAND LIST above is the single source of truth — do not use a second copy.**

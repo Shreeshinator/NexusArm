@@ -1,3 +1,5 @@
+> **📖 Docs roadmap:** not sure what to read next? See the [Documentation Roadmap](../README.md) — it gives the exact reading order for your goal.
+
 # Leader-Arm Teleop in Simulation — Pots on Arduino → Sim Arm
 
 > Want to *feel* the arm? Build a tiny leader with 4 pots + a button, and the sim follower mirrors you in real time. It's friendly, cheap, and great for demos or collecting intuition before you train.

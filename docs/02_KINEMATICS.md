@@ -1,3 +1,5 @@
+> **📖 Docs roadmap:** not sure what to read next? See the [Documentation Roadmap](README.md) — it gives the exact reading order for your goal.
+
 # Kinematics — How the Arm Knows Where to Go
 
 > Good news: you don't need to understand the math to use the arm — just `ros2 service call /modular_arm/move_to`. This page is for when you want to check, tweak, or trust the geometry. It's friendly, and it links straight to the code.

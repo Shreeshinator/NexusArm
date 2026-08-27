@@ -1,3 +1,5 @@
+> **📖 Docs roadmap:** not sure what to read next? See the [Documentation Roadmap](README.md) — it gives the exact reading order for your goal.
+
 # Data Collection — Record Demos for Learning
 
 > Let's collect some good demos! This is the friendly walkthrough for the LeRobot recorder — the same tool that made `shreeshinator/arm-picking-blocks-real` (front cam 480×640 @15Hz, 5 joints).

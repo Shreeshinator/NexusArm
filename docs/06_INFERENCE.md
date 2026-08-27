@@ -1,3 +1,5 @@
+> **📖 Docs roadmap:** not sure what to read next? See the [Documentation Roadmap](README.md) — it gives the exact reading order for your goal.
+
 # Inference — Run the Learned Policy on the Real Arm
 
 > You've built it, flashed it, and collected demos — now let's let the arm think for itself! This guide deploys the ACT policy that learns to pick the block and place it in the bowl.

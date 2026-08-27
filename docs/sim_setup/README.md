@@ -1,3 +1,5 @@
+> **📖 Docs roadmap:** not sure what to read next? See the [Documentation Roadmap](../README.md) — it gives the exact reading order for your goal.
+
 # Sim Setup — 60-Second Quickstart
 
 > You're in the right place if you just want the sim running! Only this file needed — hardware folks, you can hop to `docs/03_HARDWARE.md` after.

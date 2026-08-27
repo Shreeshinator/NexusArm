@@ -1,12 +1,14 @@
+> **📖 Docs roadmap:** not sure what to read next? See the [Documentation Roadmap](README.md) — it gives the exact reading order for your goal.
+
 # Setup — Prerequisites & Build
 
 > Hey, welcome! This doc takes you from zero to `colcon build` without surprises. If you just want to play in sim, hop to `docs/sim_setup/README.md` — for the real arm, keep reading, we've got you covered.
 
 ## 1. What you'll need
 
-* **Ubuntu 24.04** (Noble) + **ROS 2 Jazzy** (apt — no need to build from source, just install)
+* **Ubuntu 24.04** (Noble) + **ROS 2 Jazzy** (apt — no need to build from source, just install) — this is for your **dev laptop**.
 * **Gazebo Harmonic** (it pairs nicely with Jazzy — `gz sim --version` should say Harmonic)
-* Your dev laptop (x86_64) works great; Uno Q (ARM) uses the same stack via `Dockerfile` + `docker-compose.yml` (`HARDWARE.md` + `UNO_Q_PORT_PLAN.md`). Native Ubuntu is the default below.
+* Your dev laptop (x86_64) runs **native Ubuntu 24.04** — that's what the steps below assume. The **Uno Q is different: its onboard OS is Debian 13 (Trixie), *not* Ubuntu.** On the Uno Q, ROS runs inside the Ubuntu-based `shreeshinator/nexusarm:unoq` Docker image (see `HARDWARE.md`). **Only follow the native-apt steps here on your laptop**; on the Uno Q, use the Docker path.
 
 Quick check:
 

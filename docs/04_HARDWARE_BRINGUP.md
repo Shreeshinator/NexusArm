@@ -1,3 +1,5 @@
+> **📖 Docs roadmap:** not sure what to read next? See the [Documentation Roadmap](README.md) — it gives the exact reading order for your goal.
+
 # Hardware — Flash & Bringup
 
 > You built it — now let's wake it up! This one's short and friendly: flash the Arduino, launch the ROS bridge, and move the real arm with the same `MoveTo` API you used in sim.

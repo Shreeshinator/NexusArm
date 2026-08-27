@@ -6,6 +6,8 @@ A 4-DOF printed arm with one stable `MoveTo` API across Gazebo Harmonic sim, rea
 
 Repo root **is** the colcon workspace (`build/`/`install/`/`log/` gitignored). Tested on ROS 2 Jazzy + Gazebo Harmonic. All packages Apache 2.0 — see [LICENSE](LICENSE).
 
+> **📖 New to the docs?** Read the **[Documentation Roadmap](docs/README.md)** first. It gives you an exact, ordered reading path for your goal (sim-only / build the real arm / collect→train→infer / deploy on the Uno Q) so you always know which file to open next.
+
 ## Why it scores
 
 | Criterion | Why NexusArm wins |
@@ -16,6 +18,8 @@ Repo root **is** the colcon workspace (`build/`/`install/`/`log/` gitignored). T
 | 🎨 Presentation (15%) | One-command sim/hardware demos, clean architecture, Docker + HF artifacts public. |
 
 ## Where to start
+
+> **For the full reading order by goal, see the [Documentation Roadmap](docs/README.md).** The table below is a quick jump; the roadmap tells you what to read *after* each.
 
 | I want to... | Go to |
 |---|---|
@@ -69,6 +73,8 @@ ros2 service call /modular_arm/move_to modular_arm_interfaces/srv/MoveTo \
   "{x: 0.27, y: 0.0, z: 0.08, pitch: -1.57, elbow: '', gripper: 0.0, duration_sec: 2.0}"
 
 # Uno Q — all in Docker (same launch, inside container):
+# NOTE: the Uno Q's onboard OS is Debian 13 (Trixie), not Ubuntu — ROS runs inside
+# the Ubuntu-based shreeshinator/nexusarm:unoq image. Full steps: see HARDWARE.md.
 # See HARDWARE.md FULL COMMAND LIST (Steps 0–6): daemon.json → /home/arduino/docker (17G),
 # docker pull shreeshinator/nexusarm:unoq && docker compose up -d --no-build,
 # then docker compose exec arm bash → source ... → same ros2 launch real_bringup...
