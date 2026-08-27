@@ -1,4 +1,6 @@
-# AGENTS.md — Verified 2026-08-22
+# AGENTS.md — ✅ COMPLETE & SUBMITTED 2026-08-27 (was Verified 2026-08-22)
+
+> **Status: Project complete and submitted for Arduino Physical AI Challenge India 2026.** No further code changes required unless reviewer feedback. Branch `working` → `NexusArm/main` verified. This file is **intentionally tracked** (not gitignored — see `.gitignore:35`) and appears in remote repo.
 
 ROS2 **Jazzy** + **Gazebo Harmonic** colcon workspace for a 4-DOF printed arm (CAD, STL meshes in `robot_arm_description` vendored as `100644` real files — `890645f`, not `120000` symlinks). Repo root IS the colcon workspace: `build/`, `install/`, `log/` live here and are gitignored. See `SETUP.md` for apt deps. **Uno Q bringup verified on QRB2210 4GB `aarch64` Debian 13, `shreeshinator/nexusarm:unoq 7.15GB` on `/home/arduino/docker` (17G), `lerobot 0.6.1 + av 14.2.0 + torch 2.7.0/torchvision 0.22.0 + OPENBLAS_CORETYPE=ARMV8`, `fps 15` — see `HARDWARE.md` FULL COMMAND LIST (Steps 0–6).**
 
@@ -116,6 +118,6 @@ START pose `(0.27, 0, 0.08, -1.57)` (grasp height).
 - Firmware trap: `servo_bridge.ino` (Uno, `yaw +318`, `wrist 477`, `PULSE_MIN 700`) vs `sketch/servo_bridge_esp32.ino` (dev ESP32, `yaw -318`, `wrist 318`, `PULSE_MIN 800`) — must standardize on one table before port.
 
 ## Repo hygiene
-- Branch is `working` pushed to `NexusArm/main` `794c38f` verified (meshes `890645f`, docs `1e88560`).
-- `.gitignore` covers `build/`, `install/`, `log/` at any depth **and** `__pycache__/`, `*.pyc`, `.pytest_cache/` (fixed — was “NOT `__pycache__/`”); still avoid blind `git add .` (see `.gitignore:1-16`).
+- Branch is `working` pushed to `NexusArm/main` `794c38f` verified (meshes `890645f`, docs `1e88560`). **Submitted 2026-08-27 — this AGENTS.md is final.**
+- `.gitignore` covers `build/`, `install/`, `log/` at any depth **and** `__pycache__/`, `*.pyc`, `.pytest_cache/` (fixed — was “NOT `__pycache__/`”); still avoid blind `git add .` (see `.gitignore:1-16`). `AGENTS.md` is **not** ignored (see `.gitignore:35` — intentionally tracked).
 - No CI, no pre-commit hooks.

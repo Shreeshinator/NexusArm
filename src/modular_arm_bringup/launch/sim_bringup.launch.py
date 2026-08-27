@@ -28,7 +28,7 @@ def generate_launch_description():
 
     # Foxglove bridge is started after a delay to ensure everything else is alive
     foxglove = TimerAction(
-        period=8.0,  # 8 seconds seems good, you can adjust.
+        period=8.0,
         actions=[
             Node(
                 package="foxglove_bridge",
