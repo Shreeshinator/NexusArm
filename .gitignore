@@ -31,4 +31,5 @@ venv/
 .DS_Store
 Thumbs.db
 
-# (AGENTS.md intentionally tracked — do not ignore)
+# AGENTS.md no longer tracked
+AGENTS.md
