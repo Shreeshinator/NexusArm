@@ -50,26 +50,34 @@ class CameraBridge(Node):
         self.declare_parameter("fps", 15.0)
 
         self._gripper_url = self.get_parameter("gripper_url").get_parameter_value().string_value
+
         self._front_url = self.get_parameter("front_url").get_parameter_value().string_value
+
         fps = self.get_parameter("fps").get_parameter_value().double_value
+
         gripper_topic = self.get_parameter("gripper_topic").get_parameter_value().string_value
+
         front_topic = self.get_parameter("front_topic").get_parameter_value().string_value
 
-        # QoS fix 1: publisher MUST be BEST_EFFORT depth=1 to match lerobot_infer
+        # QoS fix: publisher MUST be BEST_EFFORT depth=1 to match lerobot_infer
         # subscriber (BEST_EFFORT). DDS RELIABLE<->BEST_EFFORT are incompatible —
         # with default RELIABLE the image never arrives and _tick warns "no front image".
-        img_qos = QoSProfile(
-            reliability=ReliabilityPolicy.BEST_EFFORT,
-            history=HistoryPolicy.KEEP_LAST,
-            depth=1,
-        )
-        self._pub_gripper = self.create_publisher(CompressedImage, gripper_topic, img_qos)
-        self._pub_front = self.create_publisher(CompressedImage, front_topic, img_qos)
 
-        self._lock = threading.Lock()
-        self._latest = {}       # key -> bytes (newest JPEG from that camera)
-        self._published = {}    # key -> bytes (last bytes we actually published)
-        self._frames = {}       # key -> int (frames parsed from stream)
+        img_qos = QoSProfile(
+            reliability=ReliabilityPolicy.BEST_EFFORT, # drop frames if the subscriber can't keep up
+            history=HistoryPolicy.KEEP_LAST, # if the subscriber is slow, only keep the newest frame
+            depth=1, # keep the newest frame only
+        )
+
+        # Create publisher for CompressedImage for each camera.  The topic names are ROS params.
+        self._pub_gripper = self.create_publisher(CompressedImage, gripper_topic, img_qos) # pub for gripper camera
+
+        self._pub_front = self.create_publisher(CompressedImage, front_topic, img_qos) # pub for front camera
+
+        self._lock = threading.Lock() # protects _latest, _published, _frames
+        self._latest = {}       # dict of the last bytes received (per cam)
+        self._published = {}    # the last bytes published (per cam)
+        self._frames = {}       # the number of frames parsed  
 
         # Cap the publish rate; frames are still dropped if unchanged.
         self._timer = self.create_timer(1.0 / max(fps, 1.0), self._publish_latest)

@@ -24,17 +24,16 @@ from dataclasses import dataclass
 import math
 
 # --- URDF geometry constants (keep in sync with robot_arm.urdf) ---
-BASE_H = 0.07          # joint1 height (ground -> joint1)
-SHOULDER = (-0.02, 0.11)  # joint2 position in (h, z) plane: (-0.02, 0.07+0.04)
-SEG1 = (0.047, 0.1925)  # joint2 -> joint3 offset in (h, z) plane
-SEG2 = (0.141, -0.001)  # joint3 -> joint4 offset in (h, z) plane
-SEG3 = (0.052, -0.008)  # joint4 -> gripper_link offset in (h, z) plane
+BASE_H = 0.07            # ground -> joint1
+SHOULDER = (-0.02, 0.11) # shoulder origin in (h, z) plane: (-0.02, 0.07+0.04)
+SEG1 = (0.047, 0.1925)   # elbow joint origin
+SEG2 = (0.141, -0.001)   # wrist joint origin
+SEG3 = (0.052, -0.008)   # wrist -> gripper_link offset 
 
-# Finding the lengths and angles of the segments in the (h, z) plane, which will be used in inverse kinematics calculations.
-L1 = math.hypot(*SEG1) # * is used to unpack the tuple into two arguments for hypot
+L1 = math.hypot(*SEG1) # * is used to unpack the tuple into two arguments
 L2 = math.hypot(*SEG2)
 L3 = math.hypot(*SEG3)
-A1 = math.atan2(SEG1[1], SEG1[0]) # the in-plane angle of SEG1, used in inverse kinematics
+A1 = math.atan2(SEG1[1], SEG1[0]) # in-plane angle of SEG1
 A2 = math.atan2(SEG2[1], SEG2[0]) # Same for SEG2
 DELTA = A2 - A1 # angle between SEG1 and SEG2, used in inverse kinematics
 
@@ -56,11 +55,13 @@ class Pose:
 
 def forward_kinematics(theta1: float, theta2: float, theta3: float, theta4: float) -> Pose:
     """Compute the gripper_link pose from joint angles (radians)."""
+
     s1 = _rot(theta2, SEG1) # rotate the shoulder segment by theta2
-    s2 = _rot(theta2 + theta3, SEG2) # rotate the elbow segment by theta2 + theta3
-    s3 = _rot(theta2 + theta3 + theta4, SEG3) # rotate the wrist segment by theta2 + theta3 + theta4
+    s2 = _rot(theta2 + theta3, SEG2) # rotate the elbow segment
+    s3 = _rot(theta2 + theta3 + theta4, SEG3) # rotate the wrist segment
 
     h = SHOULDER[0] + s1[0] + s2[0] + s3[0] # add up the horizontal components of the segments to get the total horizontal distance
+
     z = SHOULDER[1] + s1[1] + s2[1] + s3[1] # add up the vertical components of the segments to get the total vertical distance
 
     # Get the X and Y coordinates in the base frame by rotating the (h, z) coordinates by theta1 around the Z axis.

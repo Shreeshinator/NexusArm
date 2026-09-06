@@ -1,5 +1,5 @@
 """
-Analytical inverse kinematics for the real robot arm.
+Analytical inverse kinematics for the simulation robot arm.
 
 Standard decoupled approach for a yaw + 3R-planar arm, matching fk.py and the URDF geometry:
 
@@ -18,7 +18,7 @@ import math
 from dataclasses import dataclass
 from typing import List
 
-from .fk import SHOULDER, L1, L2, L3, A1, A2, DELTA, SEG3, _rot # the fixed geometry of the arm, in the same units as the target (meters, radians) and the _rot function for computing the wrist centre from the target pose.
+from .fk import SHOULDER, L1, L2, L3, A1, A2, DELTA, SEG3, _rot # the fixed geometry of the arm, in the same units as the target (meters, radians)
 
 # Joint angle limits (radians) — keep in sync with robot_arm.urdf.xacro
 JOINT_LIMITS = {
@@ -64,8 +64,8 @@ def inverse_kinematics(
     Raises:
         Unreachable: if no valid solution exists within joint limits.
     """
-    # Inverse kinematics for the first joint (base rotation) is straightforward: it's just the angle to the target position in the XY plane
-    theta1 = math.atan2(y, x) 
+    theta1 = math.atan2(y, x)
+
     h = x * math.cos(theta1) + y * math.sin(theta1)
 
     # Wrist centre: subtract the fixed wrist->gripper segment (rotated by pitch).

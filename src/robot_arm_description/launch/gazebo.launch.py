@@ -9,11 +9,11 @@ import os # for path manipulations
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription, RegisterEventHandler, TimerAction # RegisterEventHandler is used to delay the wrist camera bridges until after the robot is spawned
-from launch.event_handlers import OnProcessExit # for delaying the wrist camera bridges until after the robot is spawned
+from launch.event_handlers import OnProcessExit 
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command
 
-from launch_ros.parameter_descriptions import ParameterValue # for robot_description parameter
+from launch_ros.parameter_descriptions import ParameterValue 
 from launch_ros.actions import Node
 
 
@@ -167,7 +167,7 @@ def generate_launch_description():
         robot_state_publisher,
         clock_bridge,
         spawn_entity,
-        *camera_bridges,
+        *camera_bridges, # unpack the list of camera bridges
         delayed_wrist_bridges,
         delayed_broadcaster,
         delayed_arm_controller,

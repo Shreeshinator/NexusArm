@@ -10,13 +10,14 @@ recorder can use them as the action feature.
 Run:
     ros2 run modular_arm_kinematics keyboard_teleop
 """
-import select # for select.select() to seek for keyboard input without blocking 
-import sys    # for sys.stdin to read keyboard input 
+
+import select   # for select.select() to seek for keyboard input
+import sys      # for sys.stdin to read keyboard input
 import termios  # for termios.tcgetattr() and termios.tcsetattr() to change terminal settings
 
 import threading # threading needed to protect shared state (target and gripper) between the keyboard thread and the ROS2 callbacks
 
-import tty # for tty.setraw() to set the terminal to raw mode so we can read one key at a time without waiting for Enter
+import tty       # for tty.setraw() to set the terminal to raw mode so we can read one key at a time without waiting for Enter
 
 import rclpy
 from rclpy.node import Node
@@ -35,22 +36,33 @@ START = {"x": 0.27, "y": 0.0, "z": 0.08, "pitch": -1.57}
 
 
 def _read_key_blocking():
-    """Read one key press, returning an uppercase token or None on Ctrl-C."""
+    """
+    Read one key press, returning an uppercase token or None on Ctrl-C. \n
+    It blocks until a key is pressed, but does not require Enter to be pressed.
+    """
+
     fd = sys.stdin.fileno() # fd is the file descriptor for stdin (keyboard input, usually 0)
-    old = termios.tcgetattr(fd) # get the current terminal settings for stdin, because we will change them to raw mode to read one key at a time
+
+    old = termios.tcgetattr(fd) # get the current terminal settings for stdin
+
     try:
         tty.setraw(fd) # set the terminal to raw mode, so we can read one key at a time without waiting for Enter
+
         while True:
-            r, _, _ = select.select([fd], [], [], 0.1)
+            r, _, _ = select.select([fd], [], [], 0.1) 
+            # returns readable, writable, exceptional lists of file descriptors that are ready.
+
             if not r:
                 continue
-            ch = sys.stdin.read(1)
-            if ch in ("\x03", "\x04"):
+            ch = sys.stdin.read(1) # read 1 byte from stdin
+
+            if ch in ("\x03", "\x04"): # Ctrl-C or Ctrl-D
                 return None
             return ch
-    finally:
-        termios.tcsetattr(fd, termios.TCSADRAIN, old)
 
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old) 
+        # args: fd, when to apply the settings (TCSADRAIN means apply after all output has been written), and the old settings to restore
 
 class KeyboardTeleop(Node):
     def __init__(self):
@@ -98,8 +110,10 @@ class KeyboardTeleop(Node):
         req.duration_sec = 0.5
 
         future = self._client.call_async(req)
+
         # Don't block the keyboard thread forever; use a wait helper.
         rclpy.spin_until_future_complete(self, future, timeout_sec=5.0)
+
         if not future.done():
             self.get_logger().warn("move_to call timed out")
             return
@@ -110,6 +124,7 @@ class KeyboardTeleop(Node):
         if not resp.success:
             self.get_logger().warn(f"move_to rejected: {resp.message}")
             return
+
         if len(resp.joint_angles) == len(JOINT_NAMES):
             js = JointState()
             js.name = list(JOINT_NAMES)
@@ -179,8 +194,8 @@ class KeyboardTeleop(Node):
             key = _read_key_blocking()
             if key is None:
                 break
-            if self._step(key):
-                self._send()
+            if self._step(key): # also changes the target and gripper state!
+                self._send()    # send the target, and publish Joint commands
 
 
 def main(args=None):

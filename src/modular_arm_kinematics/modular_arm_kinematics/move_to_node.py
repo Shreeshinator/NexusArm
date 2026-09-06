@@ -1,13 +1,5 @@
 """ROS2 node exposing the move_to(x, y, z) API for the modular arm.
 
-This is the seam future modules plug into:
-  - a vision module can publish a target pose it detected,
-  - an LLM planner can call this service after reasoning about a command,
-  - a cloud VLA model's output can be converted to an (x, y, z, pitch) call.
-
-None of them need to know anything about joint angles or IK -- that's the
-whole point of keeping this as its own package with its own service.
-
 Run standalone (with Gazebo + controllers already running):
     ros2 run modular_arm_kinematics move_to_node
 
@@ -21,6 +13,7 @@ import rclpy
 from rclpy.action import ActionClient
 from rclpy.callback_groups import ReentrantCallbackGroup 
 # ReentrantCallbackGroup allows callbacks to be called from multiple threads, which is useful for action clients that may have callbacks invoked from different threads.
+
 from rclpy.node import Node
 
 from control_msgs.action import FollowJointTrajectory
@@ -87,7 +80,7 @@ class MoveToNode(Node):
         goal = FollowJointTrajectory.Goal()
         goal.trajectory.joint_names = JOINT_NAMES
 
-        point = JointTrajectoryPoint()
+        point = JointTrajectoryPoint() 
         point.positions = joint_angles
         point.velocities = [0.0] * len(joint_angles)
         sec = int(duration_sec)
@@ -104,7 +97,7 @@ class MoveToNode(Node):
         # (blocking inside a callback busy-loops the executor and pegs CPU).
         future = self._action_client.send_goal_async(goal)
         future.add_done_callback(self._on_goal_accepted)
-        return True, "Trajectory goal sent (accepted asynchronously)."
+        return True, "Trajectory goal sent to action server."
 
     def _on_goal_accepted(self, future):
         try:
