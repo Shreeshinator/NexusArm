@@ -1,6 +1,6 @@
 # NexusArm — 4-DOF Printed Arm: Sim → Hardware → Learning
 
-![NexusArm image](nexusarm.png)
+![NexusArm image](nexusarm.jpg)
 <br>
 ![NexusArm image](nexusarm_sim.png)
 <br>
