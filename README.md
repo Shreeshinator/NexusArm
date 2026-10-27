@@ -1,8 +1,7 @@
 # NexusArm — 4-DOF Printed Arm: Sim → Hardware → Learning
 
-![NexusArm image](nexusarm.jpg)
-<br>
-![NexusArm image](nexusarm_sim.png)
+<img src="nexusarm.jpg" style="width:150">
+<img src="nexusarm_sim.png" style="width:150">
 <br>
 A 4-DOF printed arm with one stable `MoveTo` API across Gazebo Harmonic sim, real hardware, and a learned ACT policy — deployed on **Arduino Uno Q (QRB2210)** via Docker `shreeshinator/nexusarm:unoq`.
 
