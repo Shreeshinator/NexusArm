@@ -1,6 +1,9 @@
 # NexusArm — 4-DOF Printed Arm: Sim → Hardware → Learning
 
+![NexusArm image](nexusarm.png)
+<br>
 ![NexusArm image](nexusarm_sim.png)
+<br>
 A 4-DOF printed arm with one stable `MoveTo` API across Gazebo Harmonic sim, real hardware, and a learned ACT policy — deployed on **Arduino Uno Q (QRB2210)** via Docker `shreeshinator/nexusarm:unoq`.
 
 Repo root **is** the colcon workspace (`build/`/`install/`/`log/` gitignored). Tested on ROS 2 Jazzy + Gazebo Harmonic. All packages Apache 2.0 — see [LICENSE](LICENSE).
